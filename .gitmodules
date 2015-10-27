@@ -1,0 +1,3 @@
+[submodule "sodaq_gsm_modem"]
+	path = sodaq_gsm_modem
+	url = git@bitbucket.org:actinius/sodaq_gsm_modem.git
