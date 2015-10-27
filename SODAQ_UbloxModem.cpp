@@ -4,12 +4,11 @@
 
 #include "SODAQ_UbloxModem.h"
 
-void SODAQ_UbloxModemClass::init()
+void SODAQ_UbloxModem::init()
 {
 
 
 }
 
 
-SODAQ_UbloxModemClass SODAQ_UbloxModem;
-
+SODAQ_UbloxModem ubloxModem;

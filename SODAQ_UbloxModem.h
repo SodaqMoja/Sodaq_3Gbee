@@ -9,7 +9,9 @@
 	#include "WProgram.h"
 #endif
 
-class SODAQ_UbloxModemClass
+#include "sodaq_gsm_modem/SODAQ_GSM_Modem.h"
+
+class SODAQ_UbloxModem : public SODAQ_GSM_Modem
 {
  protected:
 
@@ -18,7 +20,7 @@ class SODAQ_UbloxModemClass
 	void init();
 };
 
-extern SODAQ_UbloxModemClass SODAQ_UbloxModem;
+extern SODAQ_UbloxModem ubloxModem;
 
 #endif
 
