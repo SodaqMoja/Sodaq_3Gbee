@@ -1,2 +1,4 @@
 __vm
 *.suo
+*.sln
+*.vcx*
