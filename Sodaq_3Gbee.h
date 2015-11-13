@@ -10,9 +10,11 @@
 // TODO this needs to be set in the compiler directives. Find something else to do
 #define SODAQ_GSM_TERMINATOR CRLF
 
+#define DEFAULT_READ_MS 5000
+
+typedef size_t (*CallbackMethodPtr)(ResponseTypes response, const char* buffer, size_t size);
+
 class Sodaq_3Gbee: public Sodaq_GSM_Modem {
-protected:
-    size_t readResponse(char* buffer, size_t size, ResponseTypes& response) override;
 public:
     bool isAlive() override;
     bool setAPN(const char* apn) override;
@@ -21,7 +23,8 @@ public:
 
     bool init(Stream& stream, const char* simPin = NULL, const char* apn = NULL, const char* username = NULL, 
         const char* password = NULL, AuthorizationTypes authorization = AutoDetectAutorization) override;
-    bool join(const char* apn, const char* username, const char* password, AuthorizationTypes authorization) override;
+    bool join(const char* apn = NULL, const char* username = NULL, const char* password = NULL, 
+        AuthorizationTypes authorization = AutoDetectAutorization);
     bool disconnect() override;
 
     NetworkRegistrationStatuses getNetworkStatus() override;
@@ -58,6 +61,11 @@ public:
     bool readSms(int index, char* phoneNumber, char* buffer, size_t size) override;
     bool deleteSms(int index) override;
     bool sendSms(const char* phoneNumber, const char* buffer) override;
+protected:
+    size_t readResponse(char* buffer, size_t size, ResponseTypes& response, CallbackMethodPtr parserMethod, long timeout = DEFAULT_READ_MS);
+    size_t readResponse(char* buffer, size_t size, ResponseTypes& response) override;
+private:
+        size_t parseUnsolicitedCodes(char* buffer, size_t size);
 };
 
 extern Sodaq_3Gbee sodaq_3gbee;
