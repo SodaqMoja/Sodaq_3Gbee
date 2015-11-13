@@ -24,10 +24,18 @@ Sodaq_GSM_Modem::Sodaq_GSM_Modem() :
 // TODO is the result really needed?
 size_t Sodaq_GSM_Modem::write(const char* buffer)
 {
-    debugPrint("[write] ");
+    debugPrint("[write]");
     debugPrint(buffer);
     
     return _modemStream->print(buffer);
+}
+
+size_t Sodaq_GSM_Modem::write(uint8_t value)
+{
+    debugPrint("[write]");
+    debugPrint(value);
+
+    return _modemStream->print(value);
 };
 
 // TODO is the result really needed?
@@ -37,9 +45,15 @@ size_t Sodaq_GSM_Modem::writeLn(const char* buffer)
     return i + write(SODAQ_GSM_TERMINATOR);
 }
 
+size_t Sodaq_GSM_Modem::writeLn(uint8_t value)
+{
+    size_t i = write(value);
+    return i + write(SODAQ_GSM_TERMINATOR);
+}
+
 void Sodaq_GSM_Modem::initBuffer()
 {
-    debugPrint("[initBuffer]");
+    debugPrintLn("[initBuffer]");
 
     // make sure the buffers are only initialized once
     if (!_isBufferInitialized) {
@@ -49,16 +63,28 @@ void Sodaq_GSM_Modem::initBuffer()
     }
 }
 
+void Sodaq_GSM_Modem::setModemStream(Stream& stream)
+{
+    this->_modemStream = &stream;
+}
+
 // Reads a line from the device stream into the "buffer" and returns it starting at the "start" position of the buffer received, without the terminator.
 // Returns the number of bytes read.
-size_t Sodaq_GSM_Modem::readLn(char* buffer, size_t size, size_t start)
+size_t Sodaq_GSM_Modem::readLn(char* buffer, size_t size, size_t start, long timeout) // TODO: remove start?
 {
+    this->_modemStream->setTimeout(timeout);
     // TODO custom implement readBytesUntil to distinguise timeout from empty string?
     // TODO custom implement readBytesUntil to watch out about buffer not being enough to reach terminator
     int len = this->_modemStream->readBytesUntil('\n', buffer + start, size);
 
     // TODO configurable terminator LF/CR vs CRLF
     this->_inputBuffer[start + len - 1] = 0; // bytes until \n always end with \r, so get rid of it (-1)
+    len -= 1;
+
+    if (len > 0) {
+        debugPrint("[readLn]: ");
+        debugPrintLn(buffer + start);
+    }
 
     return len;
 }

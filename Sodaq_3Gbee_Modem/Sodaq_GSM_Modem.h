@@ -10,6 +10,8 @@
 #define LF "\n"
 #define CRLF "\r\n"
 
+#define DEFAULT_TIMEOUT 1000
+
 #define SODAQ_GSM_MODEM_DEFAULT_INPUT_BUFFER_SIZE 128
 
 #ifndef SODAQ_GSM_TERMINATOR
@@ -17,13 +19,15 @@
 #define SODAQ_GSM_TERMINATOR CRLF
 #endif
 
+typedef void (*BaudRateChangeCallbackPtr)(long newBaudrate);
+
 // TODO handle Watchdog, also use a define to turn handling on/off
 
 enum AuthorizationTypes {
-    NoAuthorization,
-    PAP,
-    CHAP,
-    AutoDetectAutorization,
+    NoAuthorization = 0,
+    PAP = 1,
+    CHAP = 2,
+    AutoDetectAutorization = 3,
 };
 
 enum NetworkRegistrationStatuses {
@@ -88,24 +92,27 @@ protected:
 
     SwitchableDevice* _sd;
 
+    BaudRateChangeCallbackPtr _baudRateChangeCallbackPtr;
+
     // initializes the input buffer and makes sure it is only initialized once. Safe to call multiple times.
     void initBuffer();
 
+    void setModemStream(Stream& stream);
+
     // Reads a line from the device stream into the "buffer" starting at the "start" position of the buffer.
     // Returns the number of bytes read.
-    size_t readLn(char* buffer, size_t size, size_t start = 0);
+    size_t readLn(char* buffer, size_t size, size_t start = 0, long timeout = DEFAULT_TIMEOUT);
 
     // Reads a line from the device stream into the input buffer.
     // Returns the number of bytes read.
-    size_t readLn()
-    {
-        return readLn(_inputBuffer, _inputBufferSize);
-    };
+    size_t readLn() { return readLn(_inputBuffer, _inputBufferSize); };
 
     size_t write(const char* buffer);
+    size_t write(uint8_t value);
 
     // write with termintator
     size_t writeLn(const char* buffer);
+    size_t writeLn(uint8_t value);
 
     virtual size_t readResponse(char* buffer, size_t size, ResponseTypes& response) = 0;
 public:
@@ -125,6 +132,8 @@ public:
 
     virtual bool init(Stream& stream, const char* simPin = NULL, const char* apn = NULL, const char* username = NULL,
                       const char* password = NULL, AuthorizationTypes authorization = AutoDetectAutorization) = 0;
+
+    void enableBaudrateChange(BaudRateChangeCallbackPtr callback) { _baudRateChangeCallbackPtr = callback; };
 
     virtual bool setAPN(const char* apn) = 0;
     virtual bool setAPNUsername(const char* username) = 0;
