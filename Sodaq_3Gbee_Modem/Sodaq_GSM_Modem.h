@@ -19,7 +19,7 @@
 #define SODAQ_GSM_TERMINATOR CRLF
 #endif
 
-typedef void (*BaudRateChangeCallbackPtr)(long newBaudrate);
+typedef void (*BaudRateChangeCallbackPtr)(uint32_t newBaudrate);
 
 // TODO handle Watchdog, also use a define to turn handling on/off
 
@@ -48,10 +48,10 @@ enum NetworkTechnologies {
 };
 
 enum SimStatuses {
-    UnknownSimStatus,
+    SimStatusUnknown,
     SimMissing,
-    PIN,
-    Ready,
+    SimNeedsPin,
+    SimReady,
 };
 
 enum Protocols {
@@ -109,10 +109,12 @@ protected:
 
     size_t write(const char* buffer);
     size_t write(uint8_t value);
+    size_t write(uint32_t value);
 
     // write with termintator
     size_t writeLn(const char* buffer);
     size_t writeLn(uint8_t value);
+    size_t writeLn(uint32_t value);
 
     virtual size_t readResponse(char* buffer, size_t size, ResponseTypes& response) = 0;
 public:
@@ -171,6 +173,9 @@ public:
 
     // Get Mobile Equipment IDentifier
     virtual bool getMEID(char* buffer, size_t size) = 0;
+
+    // Get SIM status
+    virtual SimStatuses getSimStatus() = 0;
 
     // Get IP Address
     virtual IP_t getLocalIP() = 0;
