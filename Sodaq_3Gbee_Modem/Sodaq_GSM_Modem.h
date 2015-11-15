@@ -74,6 +74,16 @@ enum ResponseTypes {
 
 typedef uint32_t IP_t;
 
+#define NO_IP_ADDRESS ((IP_t)0)
+
+#define IP_FORMAT "%d.%d.%d.%d"
+
+#define IP_TO_TUPLE(x) ((x) >> 24) & 0xFF, ((x) >> 16) & 0xFF, \
+                       ((x) >> 8) & 0xFF, ((x) >> 0) & 0xFF
+
+#define TUPLE_TO_IP(o1, o2, o3, o4) ((((IP_t)o1) << 24) | (((IP_t)o2) << 16) | \
+                                     (((IP_t)o3) << 8) | (((IP_t)o4) << 0))
+
 class Sodaq_GSM_Modem {
 protected:
     // The stream that communicates with the device.
@@ -117,6 +127,7 @@ protected:
     size_t writeLn(uint32_t value);
 
     virtual size_t readResponse(char* buffer, size_t size, ResponseTypes& response) = 0;
+    // TODO create a readResponse with embedded input buffer
 public:
     // Constructor
     Sodaq_GSM_Modem();
