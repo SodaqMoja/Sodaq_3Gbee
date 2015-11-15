@@ -8,20 +8,31 @@
 
 #define modemSerial Serial1
 
-//#define APN "public4.m2minternet.com"
+#define APN "public4.m2minternet.com"
 
-#define APN "aerea.m2m.com"
+//#define APN "aerea.m2m.com"
 //#define USERNAME NULL
 //#define PASSWORD NULL
 
+void changeModemBaudrate(uint32_t newBaudrate)
+{
+    debugSerial.print("Main: changing baudrate to ");
+    debugSerial.println(newBaudrate);
+
+    modemSerial.flush();
+    modemSerial.end();
+    modemSerial.begin(newBaudrate);
+}
+
 void setup()
 {
-    debugSerial.begin(9600);
+    debugSerial.begin(57600);
     modemSerial.begin(9600);
 
     debugSerial.println("**Bootup**");
 
     sodaq_3gbee.setDiag(debugSerial); // optional
+    sodaq_3gbee.enableBaudrateChange(changeModemBaudrate); // optional
     
     // sodaq_3gbee.setSwitchableDevice();
     pinMode(BEEDTR, OUTPUT);
@@ -33,8 +44,6 @@ void setup()
 
     if (sodaq_3gbee.init(modemSerial, NULL, APN)) {
         debugSerial.println("Modem initialization was successful.");
-
-
 
         if (sodaq_3gbee.join()) {
             debugSerial.println("Modem connected to the apn successfully.");

@@ -12,7 +12,7 @@
 
 #define DEFAULT_READ_MS 5000
 
-typedef size_t (*CallbackMethodPtr)(ResponseTypes response, const char* buffer, size_t size);
+typedef void (*CallbackMethodPtr)(ResponseTypes& response, const char* buffer, size_t size, void* parameter);
 
 class Sodaq_3Gbee: public Sodaq_GSM_Modem {
 public:
@@ -38,6 +38,7 @@ public:
     bool getCCID(char* buffer, size_t size) override;
     bool getIMSI(char* buffer, size_t size) override;
     bool getMEID(char* buffer, size_t size) override;
+    SimStatuses getSimStatus();
 
     IP_t getLocalIP() override;
     IP_t getHostIP(const char* host) override;
@@ -62,10 +63,20 @@ public:
     bool deleteSms(int index) override;
     bool sendSms(const char* phoneNumber, const char* buffer) override;
 protected:
-    size_t readResponse(char* buffer, size_t size, ResponseTypes& response, CallbackMethodPtr parserMethod, long timeout = DEFAULT_READ_MS);
+    size_t readResponse(char* buffer, size_t size, ResponseTypes& response, CallbackMethodPtr parserMethod, void* callbackParameter = NULL, uint32_t timeout = DEFAULT_READ_MS);
+
+    template<class T>
+    size_t readResponse(char* buffer, size_t size, ResponseTypes& response, 
+        void(*parserMethod)(ResponseTypes& response, const char* buffer, size_t size, T* parameter), T* callbackParameter = NULL, uint32_t timeout = DEFAULT_READ_MS)
+    {
+        return readResponse(buffer, size, response, (CallbackMethodPtr)parserMethod, (void*)callbackParameter, timeout);
+    }
+
     size_t readResponse(char* buffer, size_t size, ResponseTypes& response) override;
 private:
-        size_t parseUnsolicitedCodes(char* buffer, size_t size);
+    //size_t parseUnsolicitedCodes(char* buffer, size_t size);
+    bool setSimPin(const char* simPin);
+    static void _cpinParser(ResponseTypes& response, const char* buffer, size_t size, SimStatuses* parameter);
 };
 
 extern Sodaq_3Gbee sodaq_3gbee;

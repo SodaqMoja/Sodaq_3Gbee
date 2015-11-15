@@ -13,6 +13,9 @@
 
 #define DEBUG_STR_ERROR "[ERROR]: "
 
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+
 #ifdef DEBUG
 #define debugPrintLn(...) { if (this->_diagStream) this->_diagStream->println(__VA_ARGS__); }
 #define debugPrint(...) { if (this->_diagStream) this->_diagStream->print(__VA_ARGS__); }
@@ -23,9 +26,10 @@
 #endif
 
 #define BLOCK_TIMEOUT -1
-#define NOW (unsigned long)millis()
-#define TIMEOUT(x, ms) ((unsigned long)ms < (unsigned long)millis()-(unsigned long)x) 
+#define NOW (uint32_t)millis()
+#define TIMEOUT(x, ms) ((uint32_t)ms < (uint32_t)millis()-(uint32_t)x) 
 #define DEFAULT_PROFILE "0"
+#define HIGH_BAUDRATE 57600
 
 Sodaq_3Gbee sodaq_3gbee;
 
@@ -34,9 +38,10 @@ bool startsWith(const char* pre, const char* str)
     return (strncmp(pre, str, strlen(pre)) == 0);
 }
 
-size_t Sodaq_3Gbee::readResponse(char* buffer, size_t size, ResponseTypes& response, CallbackMethodPtr parserMethod, long timeout)
+size_t Sodaq_3Gbee::readResponse(char* buffer, size_t size, ResponseTypes& response, CallbackMethodPtr parserMethod, void* callbackParameter, uint32_t timeout)
 {
-    unsigned long from = NOW;
+    response = ResponseTimeout;
+    uint32_t from = NOW;
 
     do {
         int count = readLn(buffer, size, 0, 2000);
@@ -56,6 +61,7 @@ size_t Sodaq_3Gbee::readResponse(char* buffer, size_t size, ResponseTypes& respo
             }
             else if (startsWith(STR_RESPONSE_OK, buffer)) {
                 response = ResponseOK;
+                return 0;
             }
             else if (startsWith(STR_RESPONSE_ERROR, buffer) || startsWith(STR_RESPONSE_CME_ERROR, buffer) || startsWith(STR_RESPONSE_CMS_ERROR, buffer)) {
                 response = ResponseError;
@@ -68,24 +74,32 @@ size_t Sodaq_3Gbee::readResponse(char* buffer, size_t size, ResponseTypes& respo
             }
 
             if (parserMethod) {
-                int parsedCount = parserMethod(response, buffer, count);
-                if (parsedCount > 0) {
-                    return parsedCount;
-                }
+                parserMethod(response, buffer, count, callbackParameter);
             }
 
-            return count;
         }
 
         delay(10);
     } while (!TIMEOUT(from, timeout));
 
-    return ResponseTimeout;
+    return 0;
 }
 
 size_t Sodaq_3Gbee::readResponse(char* buffer, size_t size, ResponseTypes& response)
 {
     return readResponse(buffer, size, response, 0);
+}
+
+bool Sodaq_3Gbee::setSimPin(const char* simPin)
+{
+    write("AT+CPIN=\"");
+    write(simPin);
+    writeLn("\"");
+
+    ResponseTypes response;
+    readResponse(_inputBuffer, _inputBufferSize, response);
+
+    return (response == ResponseOK);
 }
 
 bool Sodaq_3Gbee::isAlive()
@@ -178,42 +192,58 @@ bool Sodaq_3Gbee::init(Stream& stream, const char* simPin, const char* apn, cons
 
     // if supported by target application, change the baudrate
     if (_baudRateChangeCallbackPtr) {
-        writeLn("AT+IPR=115200");
+        writeLn("AT+IPR=" STR(HIGH_BAUDRATE));
         readResponse(_inputBuffer, _inputBufferSize, response);
         if (response != ResponseOK) {
             return false;
         }
+
+        _baudRateChangeCallbackPtr(HIGH_BAUDRATE);
+        delay(1000); // wait for eveyrhing to be stable again
     }
 
     // verbose error messages
-    // TODO not supported?????!!!!
-    //writeLn("AT+CMEE=2");
-    //readResponse(_inputBuffer, _inputBufferSize, response);
-    //if (response != ResponseOK) {
-    //    return false;
-    //}
+    writeLn("AT+CMEE=2");
+    readResponse(_inputBuffer, _inputBufferSize, response);
+    if (response != ResponseOK) {
+        return false;
+    }
 
-    // enable network identification
+    // enable network identification LED
     writeLn("AT+UGPIOC=16,2");
     readResponse(_inputBuffer, _inputBufferSize, response);
     if (response != ResponseOK) {
         return false;
     }
 
-    // TODO SIM
-    //writeLn("AT+CPIN?");
-    //readResponse(_inputBuffer, _inputBufferSize, response);
-    //if () {
-    //    if (simPin) {
-    //        write("AT+CPIN=\"");
-    //        write(simPin);
-    //        writeLn("\"");
-    //        readResponse(_inputBuffer, _inputBufferSize, response);
-    //        if (response != ResponseOK) {
-    //            return false;
-    //        }
-    //    }
-    //}
+    // SIM check
+    bool simOK = false;
+    for (uint8_t i = 0; i < 5; i++) {
+        SimStatuses simStatus = getSimStatus();
+        if (simStatus == SimNeedsPin) {
+            if (!(*simPin) || !setSimPin(simPin)) {
+                debugPrintLn("[ERROR]: SIM needs a PIN but none was provided, or setting it failed!");
+                return false;
+            }
+        }
+        else if (simStatus == SimReady) {
+            simOK = true;
+            break;
+        }
+
+        delay(20);
+    }
+
+    if (!simOK) {
+        return false;
+    }
+
+    // enable auto network registration
+    writeLn("AT+COPS=0");
+    readResponse(_inputBuffer, _inputBufferSize, response);
+    if (response != ResponseOK) {
+        return false;
+    }
 
     if (*apn) {
         if (!setAPN(apn)) {
@@ -232,6 +262,9 @@ bool Sodaq_3Gbee::init(Stream& stream, const char* simPin, const char* apn, cons
             return false;
         }
     }
+
+    // TODO check AT+URAT? to be 1,2 meaning prefer umts, fallback to gprs
+    // TODO keep checking network registration until done
 
     return true;
 }
@@ -278,7 +311,7 @@ bool Sodaq_3Gbee::join(const char* apn, const char* username, const char* passwo
 
             // connect using default profile
             writeLn("AT+UPSDA=" DEFAULT_PROFILE ",3");
-            readResponse(_inputBuffer, _inputBufferSize, response, NULL, 200000);
+            readResponse(_inputBuffer, _inputBufferSize, response, NULL, NULL, 200000);
             if (response == ResponseOK) {
                 return true;
             }
@@ -356,6 +389,34 @@ bool Sodaq_3Gbee::getMEID(char* buffer, size_t size)
 {
     return false;
     // TODO: implement
+}
+
+void Sodaq_3Gbee::_cpinParser(ResponseTypes& response, const char* buffer, size_t size, SimStatuses* parameter)
+{
+    if (response == ResponseError) {
+        *parameter = SimMissing;
+    } else {
+        char status[16];
+        if (sscanf(buffer, "+CPIN: %s", &status) == 1) {
+            if (startsWith("READY", status)) {
+                *parameter = SimReady;
+            }
+            else {
+                *parameter = SimNeedsPin;
+            }
+        }
+    }
+}
+
+SimStatuses Sodaq_3Gbee::getSimStatus()
+{
+    ResponseTypes response;
+    SimStatuses simStatus;
+
+    writeLn("AT+CPIN?");
+    int count = readResponse(_inputBuffer, _inputBufferSize, response, _cpinParser, &simStatus);
+
+    return simStatus;
 }
 
 IP_t Sodaq_3Gbee::getLocalIP()
