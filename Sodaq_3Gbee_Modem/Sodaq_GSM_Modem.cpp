@@ -44,6 +44,14 @@ size_t Sodaq_GSM_Modem::write(uint32_t value)
     debugPrint(value);
 
     return _modemStream->print(value);
+}
+
+size_t Sodaq_GSM_Modem::write(char value)
+{
+    debugPrint("[write]");
+    debugPrint(value);
+
+    return _modemStream->print(value);
 };
 
 // TODO is the result really needed?
@@ -60,6 +68,12 @@ size_t Sodaq_GSM_Modem::writeLn(uint8_t value)
 }
 
 size_t Sodaq_GSM_Modem::writeLn(uint32_t value)
+{
+    size_t i = write(value);
+    return i + write(SODAQ_GSM_TERMINATOR);
+}
+
+size_t Sodaq_GSM_Modem::writeLn(char value)
 {
     size_t i = write(value);
     return i + write(SODAQ_GSM_TERMINATOR);

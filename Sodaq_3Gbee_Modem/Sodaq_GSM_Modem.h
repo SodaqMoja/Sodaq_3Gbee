@@ -84,6 +84,8 @@ typedef uint32_t IP_t;
 #define TUPLE_TO_IP(o1, o2, o3, o4) ((((IP_t)o1) << 24) | (((IP_t)o2) << 16) | \
                                      (((IP_t)o3) << 8) | (((IP_t)o4) << 0))
 
+#define SOCKET_FAIL -1
+
 class Sodaq_GSM_Modem {
 protected:
     // The stream that communicates with the device.
@@ -120,11 +122,13 @@ protected:
     size_t write(const char* buffer);
     size_t write(uint8_t value);
     size_t write(uint32_t value);
+    size_t write(char value);
 
     // write with termintator
     size_t writeLn(const char* buffer);
     size_t writeLn(uint8_t value);
     size_t writeLn(uint32_t value);
+    size_t writeLn(char value);
 
     virtual size_t readResponse(char* buffer, size_t size, ResponseTypes& response) = 0;
     // TODO create a readResponse with embedded input buffer
@@ -195,12 +199,11 @@ public:
     virtual IP_t getHostIP(const char* host) = 0;
 
     // Sockets
-    virtual int createSocket(Protocols protocol, uint16_t port) = 0;
-    virtual bool connectSocket(int socket, const char* host, int port) = 0;
-    virtual bool socketSend(int socket, const char* buffer, size_t size) = 0;
-    virtual size_t socketReceive(int socket, char* buffer, size_t size) = 0; // returns number of bytes set to buffer
-    virtual bool closeSocket(int socket) = 0;
-    virtual bool freeSocket(int socket) = 0;
+    virtual int createSocket(Protocols protocol, uint16_t localPort = 0) = 0;
+    virtual bool connectSocket(uint8_t socket, const char* host, uint16_t port) = 0;
+    virtual bool socketSend(uint8_t socket, const char* buffer, size_t size) = 0;
+    virtual size_t socketReceive(uint8_t socket, char* buffer, size_t size) = 0; // returns number of bytes set to buffer
+    virtual bool closeSocket(uint8_t socket) = 0;
 
     // HTTP
     virtual size_t httpRequest(const char* url, const char* buffer, size_t size, HttpRequestTypes requestType = GET, char* responseBuffer = NULL, size_t responseSize = 0) = 0;
