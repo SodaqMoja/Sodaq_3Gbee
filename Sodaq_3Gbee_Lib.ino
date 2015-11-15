@@ -98,11 +98,18 @@ void setup()
 
             testDNS();
 
-            delay(2000);
-            if (sodaq_3gbee.disconnect()) {
-                debugSerial.println("Modem was successfully disconnected.");
-                testDNS();
+            uint8_t socket = sodaq_3gbee.createSocket(TCP);
+            if (sodaq_3gbee.connectSocket(socket, "54.175.103.105", 30000)) {
+                debugSerial.println("socket connected");
+
+                sodaq_3gbee.socketSend(socket, "123456789", 9);
             }
+
+            //delay(2000);
+            //if (sodaq_3gbee.disconnect()) {
+            //    debugSerial.println("Modem was successfully disconnected.");
+            //    testDNS();
+            //}
         }
         else {
             debugSerial.println("Modem failed to connect to the apn!");

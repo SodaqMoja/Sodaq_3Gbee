@@ -13,6 +13,13 @@
 
 #define DEBUG_STR_ERROR "[ERROR]: "
 
+#define NIBBLE_TO_HEX_CHAR(i) ((i <= 9) ? ('0' + i) : ('A' - 10 + i))
+#define HIGH_NIBBLE(i) ((i >> 4) & 0x0F)
+#define LOW_NIBBLE(i) (i & 0x0F)
+
+#define HEX_CHAR_TO_NIBBLE(c) ((c >= 'A') ? (c - 'A' + 0x0A) : (c - '0'))
+#define HEX_PAIR_TO_BYTE(h, l) ((HEX_CHAR_TO_NIBBLE(h) << 4) + HEX_CHAR_TO_NIBBLE(l))
+
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
 
@@ -217,6 +224,13 @@ bool Sodaq_3Gbee::init(Stream& stream, const char* simPin, const char* apn, cons
 
     // verbose error messages
     writeLn("AT+CMEE=2");
+    readResponse(_inputBuffer, _inputBufferSize, response);
+    if (response != ResponseOK) {
+        return false;
+    }
+
+    // Switch sockets to hex mode
+    writeLn("AT+UDCONF=1,1"); // second param is 1=ON, 0=OFF
     readResponse(_inputBuffer, _inputBufferSize, response);
     if (response != ResponseOK) {
         return false;
@@ -505,6 +519,21 @@ void Sodaq_3Gbee::_upsndParser(ResponseTypes& response, const char* buffer, size
     }
 }
 
+void Sodaq_3Gbee::_usocrParser(ResponseTypes& response, const char* buffer, size_t size, uint8_t* socket)
+{
+    if (!socket) {
+        return;
+    }
+
+    if (response != ResponseError) {
+        int value;
+
+        if (sscanf(buffer, "+USOCR: %d", &value) == 1) {
+            *socket = value;
+        }
+    }
+}
+
 IP_t Sodaq_3Gbee::getHostIP(const char* host)
 {
     ResponseTypes response;
@@ -518,40 +547,171 @@ IP_t Sodaq_3Gbee::getHostIP(const char* host)
     return ip;
 }
 
-int Sodaq_3Gbee::createSocket(Protocols protocol, uint16_t port)
+int Sodaq_3Gbee::createSocket(Protocols protocol, uint16_t localPort)
+{
+    uint8_t protocolIndex;
+    if (protocol == TCP) {
+        protocolIndex = 6;
+    }
+    else if (protocol == UDP) {
+        protocolIndex = 17;
+    }
+    else {
+        return SOCKET_FAIL;
+    }
+
+    write("AT+USOCR=");
+    if (localPort > 0) {
+        write(protocolIndex);
+        write(",");
+        writeLn(static_cast<uint32_t>(localPort));
+    }
+    else {
+        writeLn(protocolIndex);
+    }
+
+    ResponseTypes response;
+    uint8_t socket;
+    readResponse(_inputBuffer, _inputBufferSize, response, _usocrParser, &socket);
+
+    if (response == ResponseOK) {
+        return socket;
+    }
+    
+    return SOCKET_FAIL;
+}
+
+size_t Sodaq_3Gbee::ipToStirng(IP_t ip, char* buffer, size_t size)
+{
+    return snprintf(buffer, size, IP_FORMAT, IP_TO_TUPLE(ip));
+}
+
+bool Sodaq_3Gbee::isValidIPv4(const char* str)
+{
+    uint8_t segs = 0; // Segment count
+    uint8_t chcnt = 0; // Character count within segment
+    uint8_t accum = 0; // Accumulator for segment
+
+    if (!str) {
+        return false;
+    }
+
+    // Process every character in string
+    while (*str != '\0') {
+        // Segment changeover
+        if (*str == '.') {
+            // Must have some digits in segment
+            if (chcnt == 0) {
+                return false;
+            }
+
+            // Limit number of segments
+            if (++segs == 4) {
+                return false;
+            }
+
+            // Reset segment values and restart loop
+            chcnt = accum = 0;
+            str++;
+            continue;
+        }
+
+        // Check numeric
+        if ((*str < '0') || (*str > '9')) {
+            return true;
+        }
+
+        // Accumulate and check segment
+        if ((accum = accum * 10 + *str - '0') > 255) {
+            return false;
+        }
+
+        // Advance other segment specific stuff and continue loop
+        chcnt++;
+        str++;
+    }
+
+    // Check enough segments and enough characters in last segment
+    if (segs != 3) {
+        return false;
+    }
+
+    if (chcnt == 0) {
+        return false;
+    }
+
+    // Address OK
+
+    return true;
+}
+
+bool Sodaq_3Gbee::connectSocket(uint8_t socket, const char* host, uint16_t port)
+{
+    ResponseTypes response;
+    bool usePassedHost;
+    char ipBuffer[16];
+
+    if (isValidIPv4(host)) {
+        usePassedHost = true;
+    }
+    else {
+        usePassedHost = false;
+        if (ipToStirng(getHostIP(host), ipBuffer, sizeof(ipBuffer)) <= 0) {
+            return false;
+        }
+    }
+
+    write("AT+USOCO=");
+    write(socket);
+    write(",\"");
+    write(usePassedHost ? host : ipBuffer);
+    write("\",");
+    writeLn(static_cast<uint32_t>(port));
+    readResponse(_inputBuffer, _inputBufferSize, response);
+
+    return (response == ResponseOK);
+}
+
+bool Sodaq_3Gbee::socketSend(uint8_t socket, const char* buffer, size_t size)
+{
+    // TODO see if we should keep an array of sockets so that the UDP-specific 
+    // commands can be used instead, without first initializing the UDP socket
+
+    // TODO +USOCTL=1 check last error, (11: queue full)
+
+    write("AT+USOWR=");
+    write(socket);
+    write(",");
+    write(static_cast<uint32_t>(size));
+    write(",\"");
+    for (size_t i = 0; i < size; ++i) {
+        write(static_cast<char>(NIBBLE_TO_HEX_CHAR(HIGH_NIBBLE(buffer[i]))));
+        write(static_cast<char>(NIBBLE_TO_HEX_CHAR(LOW_NIBBLE(buffer[i]))));
+    }
+
+    writeLn("\"");
+
+    ResponseTypes response;
+    readResponse(_inputBuffer, _inputBufferSize, response, 0, 0, 10000);
+
+    return (response == ResponseOK);
+}
+
+size_t Sodaq_3Gbee::socketReceive(uint8_t socket, char* buffer, size_t size)
 {
     return 0;
     // TODO: implement
 }
 
-bool Sodaq_3Gbee::connectSocket(int socket, const char* host, int port)
+bool Sodaq_3Gbee::closeSocket(uint8_t socket)
 {
-    return false;
-    // TODO: implement
-}
+    ResponseTypes response;
 
-bool Sodaq_3Gbee::socketSend(int socket, const char* buffer, size_t size)
-{
-    return false;
-    // TODO: implement
-}
+    write("AT+USOCL=");
+    writeLn(socket);
+    readResponse(_inputBuffer, _inputBufferSize, response);
 
-size_t Sodaq_3Gbee::socketReceive(int socket, char* buffer, size_t size)
-{
-    return 0;
-    // TODO: implement
-}
-
-bool Sodaq_3Gbee::closeSocket(int socket)
-{
-    return false;
-    // TODO: implement
-}
-
-bool Sodaq_3Gbee::freeSocket(int socket)
-{
-    return false;
-    // TODO: implement
+    return (response == ResponseOK);
 }
 
 size_t Sodaq_3Gbee::httpRequest(const char* url, const char* buffer, size_t size, HttpRequestTypes requestType, char* responseBuffer, size_t responseSize)
