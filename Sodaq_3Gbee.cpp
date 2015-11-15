@@ -4,7 +4,7 @@
 
 #define STR_AT "AT"
 #define STR_RESPONSE_OK "OK"
-#define STR_RESPONSE_ERROR "ERROR\r\n"
+#define STR_RESPONSE_ERROR "ERROR"
 #define STR_RESPONSE_CME_ERROR "+CME ERROR:"
 #define STR_RESPONSE_CMS_ERROR "+CMS ERROR:"
 #define STR_RESPONSE_SOCKET_PROMPT "@"
@@ -33,11 +33,12 @@
 
 Sodaq_3Gbee sodaq_3gbee;
 
-bool startsWith(const char* pre, const char* str)
+bool Sodaq_3Gbee::startsWith(const char* pre, const char* str)
 {
     return (strncmp(pre, str, strlen(pre)) == 0);
 }
 
+// TODO maybe this should change to return the response code and not the size
 size_t Sodaq_3Gbee::readResponse(char* buffer, size_t size, ResponseTypes& response, CallbackMethodPtr parserMethod, void* callbackParameter, uint32_t timeout)
 {
     response = ResponseTimeout;
@@ -61,10 +62,11 @@ size_t Sodaq_3Gbee::readResponse(char* buffer, size_t size, ResponseTypes& respo
             }
             else if (startsWith(STR_RESPONSE_OK, buffer)) {
                 response = ResponseOK;
-                return 0;
+                return 0; // TODO should this be kept like this? Or maybe parserMethod should decide
             }
             else if (startsWith(STR_RESPONSE_ERROR, buffer) || startsWith(STR_RESPONSE_CME_ERROR, buffer) || startsWith(STR_RESPONSE_CMS_ERROR, buffer)) {
                 response = ResponseError;
+                // TODO right now, if an error occurs, this keeps waiting until timeout
             }
             else if (startsWith(STR_RESPONSE_SOCKET_PROMPT, buffer) || startsWith(STR_RESPONSE_SMS_PROMPT, buffer) || startsWith(STR_RESPONSE_FILE_PROMPT, buffer)) {
                 response = ResponsePrompt;
@@ -74,7 +76,7 @@ size_t Sodaq_3Gbee::readResponse(char* buffer, size_t size, ResponseTypes& respo
             }
 
             if (parserMethod) {
-                parserMethod(response, buffer, count, callbackParameter);
+                parserMethod(response, buffer, count, callbackParameter); // TODO maybe return something to know if readResponse should quite
             }
 
         }
@@ -100,6 +102,17 @@ bool Sodaq_3Gbee::setSimPin(const char* simPin)
     readResponse(_inputBuffer, _inputBufferSize, response);
 
     return (response == ResponseOK);
+}
+
+bool Sodaq_3Gbee::isConnected()
+{
+    ResponseTypes response;
+    uint8_t value = 0;
+
+    writeLn("AT+UPSND=" DEFAULT_PROFILE ",8");
+    readResponse(_inputBuffer, _inputBufferSize, response, _upsndParser, &value);
+
+    return (value == 1);
 }
 
 bool Sodaq_3Gbee::isAlive()
@@ -271,6 +284,16 @@ bool Sodaq_3Gbee::init(Stream& stream, const char* simPin, const char* apn, cons
 
 bool Sodaq_3Gbee::join(const char* apn, const char* username, const char* password, AuthorizationTypes authorization)
 {
+    // TODO check GPRS attach (AT+CGATT=1 should be OK)
+    
+    // check if connected and disconnect
+    if (isConnected()) {
+        if (!disconnect()) {
+            debugPrintLn("[ERROR] Modem seems to be already connect and failed to disconnect!");
+            return false;
+        }
+    }
+
     if (*apn) {
         if (!setAPN(apn)) {
             return false;
@@ -297,7 +320,7 @@ bool Sodaq_3Gbee::join(const char* apn, const char* username, const char* passwo
         return false;
     }
 
-    // go through all authentication to check against the selected one or 
+    // go through all authentication methods to check against the selected one or 
     // to autodetect (first successful)
     for (uint8_t i = NoAuthorization; i < AutoDetectAutorization; i++) {
         if ((authorization == AutoDetectAutorization) || (authorization == i)) {
@@ -323,8 +346,11 @@ bool Sodaq_3Gbee::join(const char* apn, const char* username, const char* passwo
 
 bool Sodaq_3Gbee::disconnect()
 {
-    return false;
-    // TODO: implement UPSDA
+    writeLn("AT+UPSDA=" DEFAULT_PROFILE ",4");
+    ResponseTypes response;
+    readResponse(_inputBuffer, _inputBufferSize, response, 0, 0, 30000);
+
+    return (response == ResponseOK);
 }
 
 NetworkRegistrationStatuses Sodaq_3Gbee::getNetworkStatus()
@@ -393,11 +419,15 @@ bool Sodaq_3Gbee::getMEID(char* buffer, size_t size)
 
 void Sodaq_3Gbee::_cpinParser(ResponseTypes& response, const char* buffer, size_t size, SimStatuses* parameter)
 {
+    if (!parameter) {
+        return;
+    }
+
     if (response == ResponseError) {
         *parameter = SimMissing;
     } else {
         char status[16];
-        if (sscanf(buffer, "+CPIN: %s", &status) == 1) {
+        if (sscanf(buffer, "+CPIN: %" STR(sizeof(status)-1) "s", &status) == 1) {
             if (startsWith("READY", status)) {
                 *parameter = SimReady;
             }
@@ -414,21 +444,78 @@ SimStatuses Sodaq_3Gbee::getSimStatus()
     SimStatuses simStatus;
 
     writeLn("AT+CPIN?");
-    int count = readResponse(_inputBuffer, _inputBufferSize, response, _cpinParser, &simStatus);
+    readResponse(_inputBuffer, _inputBufferSize, response, _cpinParser, &simStatus);
 
     return simStatus;
 }
 
 IP_t Sodaq_3Gbee::getLocalIP()
 {
-    return 0;
-    // TODO: implement AT+UPSND
+    ResponseTypes response;
+    IP_t ip = NO_IP_ADDRESS;
+
+    writeLn("AT+UPSND=" DEFAULT_PROFILE ",0");
+    readResponse(_inputBuffer, _inputBufferSize, response, _upsndParser, &ip);
+
+    return ip;
+}
+
+void Sodaq_3Gbee::_udnsrnParser(ResponseTypes& response, const char* buffer, size_t size, IP_t* ipResult)
+{
+    if (!ipResult) {
+        return;
+    }
+
+    if (response != ResponseError) {
+        int o1, o2, o3, o4;
+
+        if (sscanf(buffer, "+UDNSRN: \"" IP_FORMAT "\"", &o1, &o2, &o3, &o4) == 4) {
+            *ipResult = TUPLE_TO_IP(o1, o2, o3, o4);
+        }
+    }
+}
+
+void Sodaq_3Gbee::_upsndParser(ResponseTypes& response, const char* buffer, size_t size, IP_t* ipResult)
+{
+    if (!ipResult) {
+        return;
+    }
+
+    if (response != ResponseError) {
+        int o1, o2, o3, o4;
+
+        if (sscanf(buffer, "+UPSND: " DEFAULT_PROFILE ", 0, \"" IP_FORMAT "\"", &o1, &o2, &o3, &o4) == 4) {
+            *ipResult = TUPLE_TO_IP(o1, o2, o3, o4);
+        }
+    }
+}
+
+void Sodaq_3Gbee::_upsndParser(ResponseTypes& response, const char* buffer, size_t size, uint8_t* thirdParam)
+{
+    if (!thirdParam) {
+        return;
+    }
+
+    if (response != ResponseError) {
+        int value;
+
+        if (sscanf(buffer, "+UPSND: %*d,%*d,%d", &value) == 1) {
+            *thirdParam = value;
+        }
+    }
 }
 
 IP_t Sodaq_3Gbee::getHostIP(const char* host)
 {
-    return 0;
-    // TODO: implement AT+UDNSRN
+    ResponseTypes response;
+    IP_t ip = NO_IP_ADDRESS;
+
+    write("AT+UDNSRN=0,\"");
+    write(host);
+    writeLn("\"");
+    readResponse(_inputBuffer, _inputBufferSize, response, _udnsrnParser, &ip);
+
+    return ip;
 }
 
 int Sodaq_3Gbee::createSocket(Protocols protocol, uint16_t port)

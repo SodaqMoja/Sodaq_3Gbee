@@ -75,8 +75,13 @@ protected:
     size_t readResponse(char* buffer, size_t size, ResponseTypes& response) override;
 private:
     //size_t parseUnsolicitedCodes(char* buffer, size_t size);
+    static bool startsWith(const char* pre, const char* str);
     bool setSimPin(const char* simPin);
-    static void _cpinParser(ResponseTypes& response, const char* buffer, size_t size, SimStatuses* parameter);
+    bool isConnected(); // TODO move/refactor into Sodaq_GSM_Modem
+    static void _cpinParser(ResponseTypes& response, const char* buffer, size_t size, SimStatuses* simStatusResult);
+    static void _udnsrnParser(ResponseTypes& response, const char* buffer, size_t size, IP_t* ipResult);
+    static void _upsndParser(ResponseTypes& response, const char* buffer, size_t size, IP_t* ipResult);
+    static void _upsndParser(ResponseTypes& response, const char* buffer, size_t size, uint8_t* thirdParam);
 };
 
 extern Sodaq_3Gbee sodaq_3gbee;
