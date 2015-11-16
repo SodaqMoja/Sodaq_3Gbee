@@ -17,10 +17,50 @@ Sodaq_GSM_Modem::Sodaq_GSM_Modem() :
     _inputBufferSize(SODAQ_GSM_MODEM_DEFAULT_INPUT_BUFFER_SIZE),
     _inputBuffer(0), 
     _timeout(DEFAULT_TIMEOUT),
-    _sd(0), 
+    _onoff(0),
     _baudRateChangeCallbackPtr(0)
 {
     this->_isBufferInitialized = false;
+}
+
+bool Sodaq_GSM_Modem::on()
+{
+    if (!isOn()) {
+        if (_onoff) {
+            _onoff->on();
+        }
+    }
+
+    // Make sure it responds
+    if (!isAlive()) {
+        // Oh, no answer, maybe it's off
+        // Fall through and rely on the status pin
+    } else {
+        // It's alive, it answered with an OK
+    }
+
+    return isOn();
+}
+
+bool Sodaq_GSM_Modem::off()
+{
+    // No matter if it is on or off, turn it off.
+    if (_onoff) {
+        _onoff->off();
+    }
+
+    // TODO _echoOff = false;
+    return !isOn();
+}
+
+bool Sodaq_GSM_Modem::isOn()
+{
+    if (_onoff) {
+        _onoff->isOn();
+    }
+
+    // No onoff. Let's assume it is on.
+    return true;
 }
 
 // TODO is the result really needed?

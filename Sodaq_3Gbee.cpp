@@ -43,6 +43,25 @@
 #define DEFAULT_HTTP_SEND_TMP_FILENAME "http_tmp_put_0"
 #define DEFAULT_HTTP_RECEIVE_TMP_FILENAME "http_last_response_0"
 
+// A specialized class to switch on/off the 3Gbee module
+// The VCC3.3 pin is switched by the Autonomo BEE_VCC pin
+// The DTR pin is the actual ON/OFF pin, it is A13 on Autonomo, D20 on Tatu
+class Sodaq_3GbeeOnOff : public Sodaq_OnOffBee
+{
+public:
+    Sodaq_3GbeeOnOff();
+    void init(int vcc33Pin, int onoffPin, int statusPin);
+    void on();
+    void off();
+    bool isOn();
+private:
+    int8_t _vcc33Pin;
+    int8_t _onoffPin;
+    int8_t _statusPin;
+};
+
+static Sodaq_3GbeeOnOff sodaq_3gbee_onoff;
+
 Sodaq_3Gbee sodaq_3gbee;
 
 bool Sodaq_3Gbee::startsWith(const char* pre, const char* str)
@@ -214,11 +233,16 @@ bool Sodaq_3Gbee::init(Stream& stream, const char* simPin, const char* apn, cons
 
     setModemStream(stream);
 
-    if (_sd) {
-        _sd->off();
-        delay(250);
-        _sd->on();
-    }
+#if 1
+    // This bit will have to be moved to the main line, and the init
+    // function needs to have parameters to pass the pin numbers
+    // These pins are for a SODAQ Mbili
+    int8_t vcc33Pin = -1;
+    int8_t onoffPin = BEEDTR;
+    int8_t statusPin = BEECTS;
+#endif
+    sodaq_3gbee_onoff.init(vcc33Pin, onoffPin, statusPin);
+    on();
 
     // wait for power up
     bool timeout = true;
@@ -1337,4 +1361,76 @@ bool Sodaq_3Gbee::sendSms(const char* phoneNumber, const char* buffer)
 {
     return false;
     // TODO: implement
+}
+
+
+Sodaq_3GbeeOnOff::Sodaq_3GbeeOnOff()
+{
+    _vcc33Pin = -1;
+    _onoffPin = -1;
+}
+
+/*!
+ * \brief Initialize the instance
+ *
+ */
+void Sodaq_3GbeeOnOff::init(int vcc33Pin, int onoffPin, int statusPin)
+{
+    if (vcc33Pin >= 0) {
+      _vcc33Pin = vcc33Pin;
+      // First write the output value, and only then set the output mode.
+      digitalWrite(_vcc33Pin, LOW);
+      pinMode(_vcc33Pin, OUTPUT);
+    }
+
+    if (onoffPin >= 0) {
+      _onoffPin = onoffPin;
+      // First write the output value, and only then set the output mode.
+      digitalWrite(_onoffPin, LOW);
+      pinMode(_onoffPin, OUTPUT);
+    }
+
+    if (statusPin >= 0) {
+      _statusPin = statusPin;
+      pinMode(_statusPin, INPUT);
+    }
+}
+
+void Sodaq_3GbeeOnOff::on()
+{
+    // First VCC 3.3 HIGH
+    if (_vcc33Pin >= 0) {
+        digitalWrite(_vcc33Pin, HIGH);
+    }
+    // Wait a little
+    // TODO Figure out if this is really needed
+    delay(2);
+    if (_onoffPin >= 0) {
+        digitalWrite(_onoffPin, HIGH);
+    }
+}
+
+void Sodaq_3GbeeOnOff::off()
+{
+    if (_vcc33Pin >= 0) {
+        digitalWrite(_vcc33Pin, LOW);
+    }
+    // The GPRSbee is switched off immediately
+    if (_onoffPin >= 0) {
+        digitalWrite(_onoffPin, LOW);
+    }
+    // Should be instant
+    // Let's wait a little, but not too long
+    delay(50);
+}
+
+bool Sodaq_3GbeeOnOff::isOn()
+{
+    if (_statusPin >= 0) {
+        bool status = digitalRead(_statusPin);
+        return status;
+    }
+
+    // No status pin. Let's assume it is on.
+    return true;
 }
