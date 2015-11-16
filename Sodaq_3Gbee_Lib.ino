@@ -1,4 +1,5 @@
 #include "Sodaq_3Gbee.h"
+#include "SD_Mbili_Xbee.h"
 
 // MBili
 #define debugSerial Serial
@@ -76,13 +77,9 @@ void setup()
     sodaq_3gbee.setDiag(debugSerial); // optional
     sodaq_3gbee.enableBaudrateChange(changeModemBaudrate); // optional
     
-    // sodaq_3gbee.setSwitchableDevice();
-    pinMode(BEEDTR, OUTPUT);
-    digitalWrite(BEEDTR, LOW);
-    delay(1000);
-    digitalWrite(BEEDTR, HIGH);
-
-    delay(100);
+    sd_mbili_xbee.off();
+    sodaq_3gbee.setSwitchableDevice(sd_mbili_xbee);
+    delay(500);
 
     if (sodaq_3gbee.init(modemSerial, NULL, APN)) {
         debugSerial.println("Modem initialization was successful.");
@@ -96,13 +93,26 @@ void setup()
             debugSerial.println();
             debugSerial.println();
 
-            testDNS();
+            //testDNS();
 
             uint8_t socket = sodaq_3gbee.createSocket(TCP);
             if (sodaq_3gbee.connectSocket(socket, "54.175.103.105", 30000)) {
                 debugSerial.println("socket connected");
 
                 sodaq_3gbee.socketSend(socket, "123456789", 9);
+                for (int i = 0; i < 10; i++) {
+                    sodaq_3gbee.isAlive(); // exploit this to allow URC to be read
+                }
+
+                char receiveBuffer[128];
+                size_t bytesRead = sodaq_3gbee.socketReceive(socket, receiveBuffer, sizeof(receiveBuffer));
+
+                debugSerial.println();
+                debugSerial.println();
+                debugSerial.print("Bytes read: ");
+                debugSerial.println(bytesRead);
+
+                debugSerial.println(receiveBuffer);
             }
 
             //delay(2000);

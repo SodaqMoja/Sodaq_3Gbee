@@ -74,6 +74,8 @@ protected:
 
     size_t readResponse(char* buffer, size_t size, ResponseTypes& response) override;
 private:
+    uint16_t _socketPendingBytes[7]; // TODO add getter
+
     //size_t parseUnsolicitedCodes(char* buffer, size_t size);
     static bool startsWith(const char* pre, const char* str);
     static size_t ipToStirng(IP_t ip, char* buffer, size_t size);
@@ -85,6 +87,7 @@ private:
     static void _upsndParser(ResponseTypes& response, const char* buffer, size_t size, IP_t* ipResult);
     static void _upsndParser(ResponseTypes& response, const char* buffer, size_t size, uint8_t* thirdParam);
     static void _usocrParser(ResponseTypes& response, const char* buffer, size_t size, uint8_t* socket);
+    static void _usordParser(ResponseTypes& response, const char* buffer, size_t size, char* resultBuffer);
 };
 
 extern Sodaq_3Gbee sodaq_3gbee;

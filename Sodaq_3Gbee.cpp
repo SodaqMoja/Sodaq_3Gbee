@@ -23,6 +23,8 @@
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
 
+#define ARRAY_SIZE(a) (sizeof(a)/sizeof(a[0]))
+
 #ifdef DEBUG
 #define debugPrintLn(...) { if (this->_diagStream) this->_diagStream->println(__VA_ARGS__); }
 #define debugPrint(...) { if (this->_diagStream) this->_diagStream->print(__VA_ARGS__); }
@@ -37,6 +39,7 @@
 #define TIMEOUT(x, ms) ((uint32_t)ms < (uint32_t)millis()-(uint32_t)x) 
 #define DEFAULT_PROFILE "0"
 #define HIGH_BAUDRATE 57600
+#define MAX_SOCKET_BUFFER 512
 
 Sodaq_3Gbee sodaq_3gbee;
 
@@ -62,7 +65,28 @@ size_t Sodaq_3Gbee::readResponse(char* buffer, size_t size, ResponseTypes& respo
             debugPrint(count);
             debugPrintLn(")");
 
-            // TODO: handle unsolicited codes here
+            // handle unsolicited codes
+            // TODO +UUPSDD
+            int param1, param2;
+            if (sscanf(buffer, "+UUSORD: %d,%d", &param1, &param2) == 2) {
+                debugPrint("Unsolicited: Socket ");
+                debugPrint(param1);
+                debugPrint(": ");
+                debugPrint(param2);
+                debugPrintLn("bytes pending");
+                if (param1 < ARRAY_SIZE(_socketPendingBytes)) {
+
+                    _socketPendingBytes[param1] = param2;
+                }
+            }
+            else if (sscanf(buffer, "+UUSOCL: %d", &param1) == 1) {
+                if (param1 < ARRAY_SIZE(_socketPendingBytes)) {
+                    debugPrint("Unsolicited: Socket ");
+                    debugPrint(param1);
+                    debugPrint(": ");
+                    debugPrintLn("closed by remote");
+                }
+            }
 
             if (startsWith(STR_AT, buffer)) {
                 continue; // skip echoed back command
@@ -676,6 +700,7 @@ bool Sodaq_3Gbee::socketSend(uint8_t socket, const char* buffer, size_t size)
 {
     // TODO see if we should keep an array of sockets so that the UDP-specific 
     // commands can be used instead, without first initializing the UDP socket
+    // OR maybe query the socket type? AT+USOCTL=0,0  => +USOCTL:0,0,6 (socket #0 is TCP)
 
     // TODO +USOCTL=1 check last error, (11: queue full)
 
@@ -697,10 +722,63 @@ bool Sodaq_3Gbee::socketSend(uint8_t socket, const char* buffer, size_t size)
     return (response == ResponseOK);
 }
 
+void Sodaq_3Gbee::_usordParser(ResponseTypes& response, const char* buffer, size_t size, char* resultBuffer)
+{
+    if (!resultBuffer) {
+        return;
+    }
+
+    if (response != ResponseError) {
+        int socket, count;
+        if ((sscanf(buffer, "+USORD: %d,%d,", &socket, &count) == 2)
+            && (buffer[size - count*2 - 2] == '\"')
+            && (buffer[size - 1] == '\"')
+            && (count < MAX_SOCKET_BUFFER)) {
+            memcpy(resultBuffer, &buffer[size - 1 - count*2], count*2);
+            resultBuffer[count*2] = 0;
+        }
+    }
+}
+
 size_t Sodaq_3Gbee::socketReceive(uint8_t socket, char* buffer, size_t size)
 {
-    return 0;
-    // TODO: implement
+    if (socket >= ARRAY_SIZE(_socketPendingBytes)) {
+        return 0;
+    }
+
+    size_t pending = _socketPendingBytes[socket];
+    size_t count = (pending > size) ? size : pending;
+
+    // bound the count, as the socket bytes are in hex string (so 2 * bytes)
+    if (count > MAX_SOCKET_BUFFER/2) {
+        count = MAX_SOCKET_BUFFER/2;
+    }
+
+    write("AT+USORD=");
+    write(socket);
+    write(",");
+    writeLn(static_cast<uint32_t>(count));
+
+    ResponseTypes response;
+    char resultBuffer[MAX_SOCKET_BUFFER];
+    readResponse(_inputBuffer, _inputBufferSize, response, _usordParser, resultBuffer);
+    
+    // stop at the first string termination char, or if output buffer is over, or if payload buffer is over
+    size_t outputIndex = 0;
+    size_t inputIndex = 0;
+
+    while (outputIndex < count
+        && resultBuffer[inputIndex] != 0
+        && resultBuffer[inputIndex + 1] != 0) {
+        buffer[outputIndex] = HEX_PAIR_TO_BYTE(resultBuffer[inputIndex], resultBuffer[inputIndex + 1]);
+        
+        inputIndex += 2;
+        outputIndex++;
+    }
+
+    buffer[count-1] = 0;
+
+    return count;
 }
 
 bool Sodaq_3Gbee::closeSocket(uint8_t socket)
