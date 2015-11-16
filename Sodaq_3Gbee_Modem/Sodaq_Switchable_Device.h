@@ -10,7 +10,6 @@ protected:
 
 public:
     SwitchableDevice();
-    virtual ~SwitchableDevice() = 0;
 
     void setOnMethod(voidFuncPtr onMethod);
     void setOffMethod(voidFuncPtr offMethod);
