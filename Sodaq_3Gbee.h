@@ -16,52 +16,52 @@ typedef void (*CallbackMethodPtr)(ResponseTypes& response, const char* buffer, s
 
 class Sodaq_3Gbee: public Sodaq_GSM_Modem {
 public:
-    bool isAlive() override;
-    bool setAPN(const char* apn) override;
-    bool setAPNUsername(const char* username) override;
-    bool setAPNPassword(const char* password) override;
+    bool isAlive();
+    bool setAPN(const char* apn);
+    bool setAPNUsername(const char* username);
+    bool setAPNPassword(const char* password);
 
     bool init(Stream& stream, const char* simPin = NULL, const char* apn = NULL, const char* username = NULL, 
-        const char* password = NULL, AuthorizationTypes authorization = AutoDetectAutorization) override;
+        const char* password = NULL, AuthorizationTypes authorization = AutoDetectAutorization);
     bool join(const char* apn = NULL, const char* username = NULL, const char* password = NULL, 
         AuthorizationTypes authorization = AutoDetectAutorization);
-    bool disconnect() override;
+    bool disconnect();
 
-    NetworkRegistrationStatuses getNetworkStatus() override;
-    NetworkTechnologies getNetworkTechnology() override;
+    NetworkRegistrationStatuses getNetworkStatus();
+    NetworkTechnologies getNetworkTechnology();
 
-    bool getRSSI(char* buffer, size_t size) override;
-    bool getBER(char* buffer, size_t size) override;
-    bool getOperatorName(char* buffer, size_t size) override;
-    bool getMobileDirectoryNumber(char* buffer, size_t size) override;
-    bool getIMEI(char* buffer, size_t size) override;
-    bool getCCID(char* buffer, size_t size) override;
-    bool getIMSI(char* buffer, size_t size) override;
-    bool getMEID(char* buffer, size_t size) override;
-    SimStatuses getSimStatus() override;
+    bool getRSSI(char* buffer, size_t size);
+    bool getBER(char* buffer, size_t size);
+    bool getOperatorName(char* buffer, size_t size);
+    bool getMobileDirectoryNumber(char* buffer, size_t size);
+    bool getIMEI(char* buffer, size_t size);
+    bool getCCID(char* buffer, size_t size);
+    bool getIMSI(char* buffer, size_t size);
+    bool getMEID(char* buffer, size_t size);
+    SimStatuses getSimStatus();
 
-    IP_t getLocalIP() override;
-    IP_t getHostIP(const char* host) override;
+    IP_t getLocalIP();
+    IP_t getHostIP(const char* host);
 
-    int createSocket(Protocols protocol, uint16_t localPort = 0) override;
-    bool connectSocket(uint8_t socket, const char* host, uint16_t port) override;
-    bool socketSend(uint8_t socket, const char* buffer, size_t size) override;
-    size_t socketReceive(uint8_t socket, char* buffer, size_t size) override;
-    bool closeSocket(uint8_t socket) override;
+    int createSocket(Protocols protocol, uint16_t localPort = 0);
+    bool connectSocket(uint8_t socket, const char* host, uint16_t port);
+    bool socketSend(uint8_t socket, const char* buffer, size_t size);
+    size_t socketReceive(uint8_t socket, char* buffer, size_t size);
+    bool closeSocket(uint8_t socket);
 
-    size_t httpRequest(const char* url, const char* buffer, size_t size, HttpRequestTypes requestType = GET, char* responseBuffer = NULL, size_t responseSize = 0) override;
+    size_t httpRequest(const char* url, const char* buffer, size_t size, HttpRequestTypes requestType = GET, char* responseBuffer = NULL, size_t responseSize = 0);
 
-    bool openFtpConnection(const char* server, const char* username, const char* password) override;
-    bool closeFtpConnection() override;
-    bool openFtpFile(const char* filename, const char* path) override;
-    bool ftpSend(const char* buffer) override;
-    int ftpReceive(char* buffer, size_t size) override;
-    bool closeFtpFile() override;
+    bool openFtpConnection(const char* server, const char* username, const char* password);
+    bool closeFtpConnection();
+    bool openFtpFile(const char* filename, const char* path);
+    bool ftpSend(const char* buffer);
+    int ftpReceive(char* buffer, size_t size);
+    bool closeFtpFile();
     
-    int getSmsList(const char* statusFilter, int* indexList, size_t size) override;
-    bool readSms(int index, char* phoneNumber, char* buffer, size_t size) override;
-    bool deleteSms(int index) override;
-    bool sendSms(const char* phoneNumber, const char* buffer) override;
+    int getSmsList(const char* statusFilter, int* indexList, size_t size);
+    bool readSms(int index, char* phoneNumber, char* buffer, size_t size);
+    bool deleteSms(int index);
+    bool sendSms(const char* phoneNumber, const char* buffer);
 protected:
     size_t readResponse(char* buffer, size_t size, ResponseTypes& response, CallbackMethodPtr parserMethod, void* callbackParameter = NULL, uint32_t timeout = DEFAULT_READ_MS);
 
@@ -72,7 +72,7 @@ protected:
         return readResponse(buffer, size, response, (CallbackMethodPtr)parserMethod, (void*)callbackParameter, timeout);
     }
 
-    size_t readResponse(char* buffer, size_t size, ResponseTypes& response) override;
+    size_t readResponse(char* buffer, size_t size, ResponseTypes& response);
 private:
     uint16_t _socketPendingBytes[7]; // TODO add getter
 
