@@ -43,7 +43,9 @@ enum NetworkTechnologies {
     GSM,
     EDGE,
     UTRAN,
-    CDMA,
+    HSDPA,
+    HSUPA,
+    HSDPAHSUPA,
     LTE,
 };
 
