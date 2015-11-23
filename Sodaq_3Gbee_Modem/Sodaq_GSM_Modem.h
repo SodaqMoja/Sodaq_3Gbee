@@ -65,14 +65,17 @@ enum HttpRequestTypes {
 };
 
 enum ResponseTypes {
-    ResponseNotFound,
-    ResponseOK,
-    ResponseError,
-    ResponsePrompt,
-    ResponseTimeout,
+    ResponseNotFound = 0,
+    ResponseOK = 1,
+    ResponseError = 2,
+    ResponsePrompt = 3,
+    ResponseTimeout = 4,
+    ResponseEmpty = 5,
 };
 
 typedef uint32_t IP_t;
+
+#define DEFAULT_READ_MS 5000
 
 #define NO_IP_ADDRESS ((IP_t)0)
 
@@ -126,14 +129,13 @@ protected:
     size_t write(uint32_t value);
     size_t write(char value);
 
-    // write with termintator
+    // write with terminator
     size_t writeLn(const char* buffer);
     size_t writeLn(uint8_t value);
     size_t writeLn(uint32_t value);
     size_t writeLn(char value);
 
-    virtual size_t readResponse(char* buffer, size_t size, ResponseTypes& response) = 0;
-    // TODO create a readResponse with embedded input buffer
+    virtual ResponseTypes readResponse(char* buffer, size_t size, size_t* outSize, uint32_t timeout = DEFAULT_READ_MS) = 0;
 public:
     // Constructor
     Sodaq_GSM_Modem();
@@ -168,11 +170,8 @@ public:
 
     virtual NetworkTechnologies getNetworkTechnology() = 0;
 
-    // Get the Received Signal Strength Indication
-    virtual bool getRSSI(char* buffer, size_t size) = 0;
-
-    // Get the getBER (Bit Error Rate)
-    virtual bool getBER(char* buffer, size_t size) = 0;
+    // Get the Received Signal Strength Indication and Bit Error Rate
+    virtual bool getRSSIAndBER(uint8_t* rssi, uint8_t* ber) = 0;
 
     // Get the Operator Name
     virtual bool getOperatorName(char* buffer, size_t size) = 0;
