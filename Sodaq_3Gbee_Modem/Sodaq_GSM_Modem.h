@@ -78,8 +78,10 @@ typedef uint32_t IP_t;
 
 #define IP_FORMAT "%d.%d.%d.%d"
 
-#define IP_TO_TUPLE(x) ((x) >> 24) & 0xFF, ((x) >> 16) & 0xFF, \
-                       ((x) >> 8) & 0xFF, ((x) >> 0) & 0xFF
+#define IP_TO_TUPLE(x) (uint8_t)(((x) >> 24) & 0xFF), \
+                       (uint8_t)(((x) >> 16) & 0xFF), \
+                       (uint8_t)(((x) >> 8) & 0xFF), \
+                       (uint8_t)(((x) >> 0) & 0xFF)
 
 #define TUPLE_TO_IP(o1, o2, o3, o4) ((((IP_t)o1) << 24) | (((IP_t)o2) << 16) | \
                                      (((IP_t)o3) << 8) | (((IP_t)o4) << 0))
