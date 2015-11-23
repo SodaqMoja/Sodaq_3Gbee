@@ -74,13 +74,13 @@ size_t Sodaq_3Gbee::readResponse(char* buffer, size_t size, ResponseTypes& respo
                 debugPrint(": ");
                 debugPrint(param2);
                 debugPrintLn("bytes pending");
-                if (param1 < ARRAY_SIZE(_socketPendingBytes)) {
+                if (static_cast<uint16_t>(param1) < ARRAY_SIZE(_socketPendingBytes)) {
 
                     _socketPendingBytes[param1] = param2;
                 }
             }
             else if (sscanf(buffer, "+UUSOCL: %d", &param1) == 1) {
-                if (param1 < ARRAY_SIZE(_socketPendingBytes)) {
+                if (static_cast<uint16_t>(param1) < ARRAY_SIZE(_socketPendingBytes)) {
                     debugPrint("Unsolicited: Socket ");
                     debugPrint(param1);
                     debugPrint(": ");
