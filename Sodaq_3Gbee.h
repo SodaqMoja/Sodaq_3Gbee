@@ -10,7 +10,7 @@
 // TODO this needs to be set in the compiler directives. Find something else to do
 #define SODAQ_GSM_TERMINATOR CRLF
 
-typedef ResponseTypes(*CallbackMethodPtr)(ResponseTypes& response, const char* buffer, size_t size, void* parameter);
+typedef ResponseTypes(*CallbackMethodPtr)(ResponseTypes& response, const char* buffer, size_t size, void* parameter, void* parameter2);
 
 class Sodaq_3Gbee: public Sodaq_GSM_Modem {
 public:
@@ -63,33 +63,32 @@ public:
     bool sendSms(const char* phoneNumber, const char* buffer);
 protected:
     ResponseTypes readResponse(char* buffer, size_t size, CallbackMethodPtr parserMethod,
-        void* callbackParameter, size_t* outSize = NULL, uint32_t timeout = DEFAULT_READ_MS);
+        void* callbackParameter, void* callbackParameter2 = NULL, size_t* outSize = NULL, uint32_t timeout = DEFAULT_READ_MS);
 
     // override
     ResponseTypes readResponse(char* buffer, size_t size, size_t* outSize, uint32_t timeout = DEFAULT_READ_MS)
     {
-        return readResponse(_inputBuffer, _inputBufferSize, NULL, NULL, outSize, timeout);
+        return readResponse(_inputBuffer, _inputBufferSize, NULL, NULL, NULL, outSize, timeout);
     };
     
     ResponseTypes readResponse(size_t* outSize = NULL, uint32_t timeout = DEFAULT_READ_MS)
     {
-        return readResponse(_inputBuffer, _inputBufferSize, NULL, NULL, outSize, timeout);
+        return readResponse(_inputBuffer, _inputBufferSize, NULL, NULL, NULL, outSize, timeout);
     };
 
     ResponseTypes readResponse(CallbackMethodPtr parserMethod, void* callbackParameter,
         void* callbackParameter2 = NULL, size_t* outSize = NULL, uint32_t timeout = DEFAULT_READ_MS)
     {
-        return readResponse(_inputBuffer, _inputBufferSize, parserMethod, callbackParameter, 
-            outSize, timeout);
+        return readResponse(_inputBuffer, _inputBufferSize, parserMethod, callbackParameter, callbackParameter2, outSize, timeout);
     };
 
-    template<class P1>
-    ResponseTypes readResponse(ResponseTypes(*parserMethod)(ResponseTypes& response, const char* parseBuffer, size_t size, P1* parameter),
-        P1* callbackParameter,
+    template<typename T1, typename T2>
+    ResponseTypes readResponse(ResponseTypes(*parserMethod)(ResponseTypes& response, const char* parseBuffer, size_t size, T1* parameter, T2* parameter2),
+        T1* callbackParameter, T2* callbackParameter2,
         size_t* outSize = NULL, uint32_t timeout = DEFAULT_READ_MS)
     {
         return readResponse(_inputBuffer, _inputBufferSize, (CallbackMethodPtr)parserMethod, 
-            (void*)callbackParameter, outSize, timeout);
+            (void*)callbackParameter, (void*)callbackParameter2, outSize, timeout);
     };
 private:
     uint16_t _socketPendingBytes[7]; // TODO add getter
@@ -99,13 +98,14 @@ private:
     static bool isValidIPv4(const char* str);
     bool setSimPin(const char* simPin);
     bool isConnected(); // TODO move/refactor into Sodaq_GSM_Modem
-    static ResponseTypes _cpinParser(ResponseTypes& response, const char* buffer, size_t size, SimStatuses* simStatusResult);
-    static ResponseTypes _udnsrnParser(ResponseTypes& response, const char* buffer, size_t size, IP_t* ipResult);
-    static ResponseTypes _upsndParser(ResponseTypes& response, const char* buffer, size_t size, IP_t* ipResult);
-    static ResponseTypes _upsndParser(ResponseTypes& response, const char* buffer, size_t size, uint8_t* thirdParam);
-    static ResponseTypes _usocrParser(ResponseTypes& response, const char* buffer, size_t size, uint8_t* socket);
-    static ResponseTypes _usordParser(ResponseTypes& response, const char* buffer, size_t size, char* resultBuffer);
-    static ResponseTypes _copsParser(ResponseTypes& response, const char* buffer, size_t size, char* operatorNameBuffer);
+    static ResponseTypes _cpinParser(ResponseTypes& response, const char* buffer, size_t size, SimStatuses* simStatusResult, uint8_t* dummy);
+    static ResponseTypes _udnsrnParser(ResponseTypes& response, const char* buffer, size_t size, IP_t* ipResult, uint8_t* dummy);
+    static ResponseTypes _upsndParser(ResponseTypes& response, const char* buffer, size_t size, IP_t* ipResult, uint8_t* dummy);
+    static ResponseTypes _upsndParser(ResponseTypes& response, const char* buffer, size_t size, uint8_t* thirdParam, uint8_t* dummy);
+    static ResponseTypes _usocrParser(ResponseTypes& response, const char* buffer, size_t size, uint8_t* socket, uint8_t* dummy);
+    static ResponseTypes _usordParser(ResponseTypes& response, const char* buffer, size_t size, char* resultBuffer, uint8_t* dummy);
+    static ResponseTypes _copsParser(ResponseTypes& response, const char* buffer, size_t size, char* operatorNameBuffer, size_t* operatorNameBufferSize);
+    static ResponseTypes _copsParser(ResponseTypes& response, const char* buffer, size_t size, int* networkTechnology, uint8_t* dummy);
 };
 
 extern Sodaq_3Gbee sodaq_3gbee;

@@ -93,38 +93,45 @@ void setup()
             debugSerial.println();
             debugSerial.println();
 
-            //testDNS();
+//            testDNS();
 
-            uint8_t socket = sodaq_3gbee.createSocket(TCP);
-            if (sodaq_3gbee.connectSocket(socket, "54.175.103.105", 30000)) {
-                debugSerial.println("socket connected");
+//            uint8_t socket = sodaq_3gbee.createSocket(TCP);
+//            if (sodaq_3gbee.connectSocket(socket, "54.175.103.105", 30000)) {
+//                debugSerial.println("socket connected");
+//
+//                sodaq_3gbee.socketSend(socket, "123456789", 9);
+//                for (int i = 0; i < 10; i++) {
+//                    sodaq_3gbee.isAlive(); // exploit this to allow URC to be read
+//                }
+//
+//                char receiveBuffer[128];
+//                size_t bytesRead = sodaq_3gbee.socketReceive(socket, receiveBuffer, sizeof(receiveBuffer));
+//
+//                debugSerial.println();
+//                debugSerial.println();
+//                debugSerial.print("Bytes read: ");
+//                debugSerial.println(bytesRead);
+//
+//                for (size_t i = 0; i < bytesRead; i++)
+//                {
+//                    debugSerial.print(receiveBuffer[i]);
+//                }
+//
+//                debugSerial.println();
+//            }
 
-                sodaq_3gbee.socketSend(socket, "123456789", 9);
-                for (int i = 0; i < 10; i++) {
-                    sodaq_3gbee.isAlive(); // exploit this to allow URC to be read
-                }
-
-                char receiveBuffer[128];
-                size_t bytesRead = sodaq_3gbee.socketReceive(socket, receiveBuffer, sizeof(receiveBuffer));
-
-                debugSerial.println();
-                debugSerial.println();
-                debugSerial.print("Bytes read: ");
-                debugSerial.println(bytesRead);
-
-                for (size_t i = 0; i < bytesRead; i++)
-                {
-                    debugSerial.print(receiveBuffer[i]);
-                }
-
-                debugSerial.println();
+            char operatorBuffer[16];
+            if (sodaq_3gbee.getOperatorName(operatorBuffer, sizeof(operatorBuffer))) {
+                debugSerial.println(operatorBuffer);
             }
 
-            //delay(2000);
-            //if (sodaq_3gbee.disconnect()) {
-            //    debugSerial.println("Modem was successfully disconnected.");
-            //    testDNS();
-            //}
+            debugSerial.println(sodaq_3gbee.getNetworkTechnology());
+
+//            delay(2000);
+//            if (sodaq_3gbee.disconnect()) {
+//                debugSerial.println("Modem was successfully disconnected.");
+//                testDNS();
+//            }
         }
         else {
             debugSerial.println("Modem failed to connect to the apn!");
