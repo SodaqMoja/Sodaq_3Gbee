@@ -465,7 +465,7 @@ void Sodaq_3Gbee::_cpinParser(ResponseTypes& response, const char* buffer, size_
         *parameter = SimMissing;
     } else {
         char status[16];
-        if (sscanf(buffer, "+CPIN: %" STR(sizeof(status)-1) "s", &status) == 1) {
+        if (sscanf(buffer, "+CPIN: %" STR(sizeof(status)-1) "s", status) == 1) {
             if (startsWith("READY", status)) {
                 *parameter = SimReady;
             }
