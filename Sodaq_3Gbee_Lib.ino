@@ -70,7 +70,7 @@ void changeModemBaudrate(uint32_t newBaudrate)
 void setup()
 {
     debugSerial.begin(57600);
-    modemSerial.begin(9600);
+    modemSerial.begin(sodaq_3gbee.getDefaultBaudrate());
 
     debugSerial.println("**Bootup**");
 

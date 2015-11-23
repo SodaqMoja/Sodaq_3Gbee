@@ -152,6 +152,7 @@ public:
     virtual bool init(Stream& stream, const char* simPin = NULL, const char* apn = NULL, const char* username = NULL,
                       const char* password = NULL, AuthorizationTypes authorization = AutoDetectAutorization) = 0;
 
+    virtual uint32_t getDefaultBaudrate() = 0;
     void enableBaudrateChange(BaudRateChangeCallbackPtr callback) { _baudRateChangeCallbackPtr = callback; };
 
     virtual bool setAPN(const char* apn) = 0;

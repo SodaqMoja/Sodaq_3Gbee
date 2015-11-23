@@ -21,6 +21,8 @@ public:
     bool setAPNUsername(const char* username);
     bool setAPNPassword(const char* password);
 
+    uint32_t getDefaultBaudrate() { return 9600; };
+
     bool init(Stream& stream, const char* simPin = NULL, const char* apn = NULL, const char* username = NULL, 
         const char* password = NULL, AuthorizationTypes authorization = AutoDetectAutorization);
     bool join(const char* apn = NULL, const char* username = NULL, const char* password = NULL, 
