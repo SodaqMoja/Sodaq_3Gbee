@@ -30,7 +30,7 @@ public:
     NetworkRegistrationStatuses getNetworkStatus();
     NetworkTechnologies getNetworkTechnology();
 
-    bool getRSSIAndBER(uint8_t* rssi, uint8_t* ber);
+    bool getRSSIAndBER(int8_t* rssi, uint8_t* ber);
     bool getOperatorName(char* buffer, size_t size);
     bool getMobileDirectoryNumber(char* buffer, size_t size);
     bool getIMEI(char* buffer, size_t size);
@@ -106,6 +106,7 @@ private:
     static ResponseTypes _usordParser(ResponseTypes& response, const char* buffer, size_t size, char* resultBuffer, uint8_t* dummy);
     static ResponseTypes _copsParser(ResponseTypes& response, const char* buffer, size_t size, char* operatorNameBuffer, size_t* operatorNameBufferSize);
     static ResponseTypes _copsParser(ResponseTypes& response, const char* buffer, size_t size, int* networkTechnology, uint8_t* dummy);
+    static ResponseTypes _csqParser(ResponseTypes& response, const char* buffer, size_t size, int* rssi, int* ber);
 };
 
 extern Sodaq_3Gbee sodaq_3gbee;

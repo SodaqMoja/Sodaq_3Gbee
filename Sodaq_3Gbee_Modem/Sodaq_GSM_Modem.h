@@ -173,7 +173,7 @@ public:
     virtual NetworkTechnologies getNetworkTechnology() = 0;
 
     // Get the Received Signal Strength Indication and Bit Error Rate
-    virtual bool getRSSIAndBER(uint8_t* rssi, uint8_t* ber) = 0;
+    virtual bool getRSSIAndBER(int8_t* rssi, uint8_t* ber) = 0;
 
     // Get the Operator Name
     virtual bool getOperatorName(char* buffer, size_t size) = 0;

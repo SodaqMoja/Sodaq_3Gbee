@@ -402,14 +402,36 @@ NetworkTechnologies Sodaq_3Gbee::getNetworkTechnology()
     return UnknownNetworkTechnology;
 }
 
-bool Sodaq_3Gbee::getRSSIAndBER(uint8_t* rssi, uint8_t* ber)
+ResponseTypes Sodaq_3Gbee::_csqParser(ResponseTypes& response, const char* buffer, size_t size, int* rssi, int* ber)
+{
+    if (!rssi || !ber) {
+        return ResponseError;
+    }
+
+    if (sscanf(buffer, "+CSQ: %d,%d", rssi, ber) == 2) {
+        return ResponseEmpty;
+    }
+
+    return ResponseError;
+
+}
+
+// rssi in dBm
+bool Sodaq_3Gbee::getRSSIAndBER(int8_t* rssi, uint8_t* ber)
 {
     static char berValues[] = { 49, 43, 37, 25, 19, 13, 7, 0 }; // 3GPP TS 45.008 [20] subclause 8.2.4
     
     writeLn("AT+CSQ");
-    // TODO: implement AT+CSQ, +CSQ: %d,%d <rssi>,<quality> 
-    // result: quality != 99 && b < sizeof(berValues), berValues[quality]
-    // result: rssi !=99 && -113 + 2*rssi dBm
+
+    int rssiRaw = 0;
+    int berRaw = 0;
+
+    if (readResponse<int, int>(_csqParser, &rssiRaw, &berRaw) == ResponseOK) {
+        *rssi = ((rssiRaw == 99) ? 0 : -113 + 2 * rssiRaw);
+        *ber = ((berRaw == 99 || static_cast<unsigned>(berRaw) >= sizeof(berValues)) ? 0 : berValues[berRaw]);
+        
+        return true;
+    }
 
     return false;
 }

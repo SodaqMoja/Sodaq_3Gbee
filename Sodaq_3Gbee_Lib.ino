@@ -120,12 +120,29 @@ void setup()
 //                debugSerial.println();
 //            }
 
-            char operatorBuffer[16];
-            if (sodaq_3gbee.getOperatorName(operatorBuffer, sizeof(operatorBuffer))) {
-                debugSerial.println(operatorBuffer);
-            }
+//            char operatorBuffer[16];
+//            if (sodaq_3gbee.getOperatorName(operatorBuffer, sizeof(operatorBuffer))) {
+//                debugSerial.println(operatorBuffer);
+//            }
 
-            debugSerial.println(sodaq_3gbee.getNetworkTechnology());
+//            debugSerial.println(sodaq_3gbee.getNetworkTechnology());
+
+            int8_t rssi;
+            uint8_t ber;
+            for (uint8_t i = 0; i < 20; i++) {
+                if (sodaq_3gbee.getRSSIAndBER(&rssi, &ber)) {
+                    debugSerial.print("RSSI:");
+                    debugSerial.print(rssi);
+                    debugSerial.print("dBm\t");
+                    debugSerial.print("BER:");
+                    debugSerial.println(ber);
+                }
+                else {
+                    debugSerial.println("something went wrong with getting rssi and ber");
+                }
+
+                delay(2000);
+            }
 
 //            delay(2000);
 //            if (sodaq_3gbee.disconnect()) {
