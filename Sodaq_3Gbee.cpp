@@ -740,6 +740,7 @@ void Sodaq_3Gbee::_usordParser(ResponseTypes& response, const char* buffer, size
     }
 }
 
+// does not terminate string
 size_t Sodaq_3Gbee::socketReceive(uint8_t socket, char* buffer, size_t size)
 {
     if (socket >= ARRAY_SIZE(_socketPendingBytes)) {
@@ -775,8 +776,6 @@ size_t Sodaq_3Gbee::socketReceive(uint8_t socket, char* buffer, size_t size)
         inputIndex += 2;
         outputIndex++;
     }
-
-    buffer[count-1] = 0;
 
     return count;
 }

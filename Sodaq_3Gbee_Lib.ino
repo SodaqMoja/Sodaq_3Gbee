@@ -112,7 +112,12 @@ void setup()
                 debugSerial.print("Bytes read: ");
                 debugSerial.println(bytesRead);
 
-                debugSerial.println(receiveBuffer);
+                for (size_t i = 0; i < bytesRead; i++)
+                {
+                    debugSerial.print(receiveBuffer[i]);
+                }
+
+                debugSerial.println();
             }
 
             //delay(2000);
