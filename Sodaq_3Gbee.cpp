@@ -954,8 +954,6 @@ size_t Sodaq_3Gbee::httpRequest(const char* url, const char* buffer, size_t size
     // TODOL implement
 }
 
-// ========
-
 bool Sodaq_3Gbee::openFtpConnection(const char* server, const char* username, const char* password)
 {
     return false;
@@ -998,16 +996,18 @@ int Sodaq_3Gbee::getSmsList(const char* statusFilter, int* indexList, size_t siz
     // TODO: implement
 }
 
-bool Sodaq_3Gbee::readSms(int index, char* phoneNumber, char* buffer, size_t size)
+bool Sodaq_3Gbee::readSms(uint8_t index, char* phoneNumber, char* buffer, size_t size)
 {
     return false;
     // TODO: implement
 }
 
-bool Sodaq_3Gbee::deleteSms(int index)
+bool Sodaq_3Gbee::deleteSms(uint8_t index)
 {
-    return false;
-    // TODO: implement
+    write("AT+CMGD=");
+    writeLn(index);
+
+    return (readResponse() == ResponseOK);
 }
 
 bool Sodaq_3Gbee::sendSms(const char* phoneNumber, const char* buffer)

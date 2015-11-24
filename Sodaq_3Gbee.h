@@ -57,8 +57,8 @@ public:
     bool closeFtpFile();
     
     int getSmsList(const char* statusFilter, int* indexList, size_t size);
-    bool readSms(int index, char* phoneNumber, char* buffer, size_t size);
-    bool deleteSms(int index);
+    bool readSms(uint8_t index, char* phoneNumber, char* buffer, size_t size);
+    bool deleteSms(uint8_t index);
     bool sendSms(const char* phoneNumber, const char* buffer);
 protected:
     ResponseTypes readResponse(char* buffer, size_t size, CallbackMethodPtr parserMethod,

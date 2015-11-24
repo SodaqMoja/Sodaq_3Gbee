@@ -219,8 +219,8 @@ public:
 
     // Sms
     virtual int getSmsList(const char* statusFilter = "ALL", int* indexList = NULL, size_t size = 0) = 0;
-    virtual bool readSms(int index, char* phoneNumber, char* buffer, size_t size) = 0;
-    virtual bool deleteSms(int index) = 0;
+    virtual bool readSms(uint8_t index, char* phoneNumber, char* buffer, size_t size) = 0;
+    virtual bool deleteSms(uint8_t index) = 0;
     virtual bool sendSms(const char* phoneNumber, const char* buffer) = 0;
 };
 
