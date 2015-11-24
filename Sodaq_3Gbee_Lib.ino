@@ -126,6 +126,7 @@ void setup()
 //            }
 
 //            debugSerial.println(sodaq_3gbee.getNetworkTechnology());
+//            debugSerial.println(sodaq_3gbee.getNetworkStatus());
 
 //            int8_t rssi;
 //            uint8_t ber;

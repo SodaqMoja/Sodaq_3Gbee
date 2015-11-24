@@ -375,10 +375,36 @@ bool Sodaq_3Gbee::disconnect()
     return (readResponse(NULL, 30000) == ResponseOK);
 }
 
+ResponseTypes Sodaq_3Gbee::_cregParser(ResponseTypes& response, const char* buffer, size_t size, int* networkStatus, uint8_t* dummy)
+{
+    if (!networkStatus) {
+        return ResponseError;
+    }
+
+    if (sscanf(buffer, "+CREG: %*d,%d", networkStatus) == 1) {
+        return ResponseEmpty;
+    }
+
+    return ResponseError;
+}
+
 NetworkRegistrationStatuses Sodaq_3Gbee::getNetworkStatus()
 {
-    return NoNetworkRegistrationStatus;
-    // TODO: implement
+    writeLn("AT+CREG?"); // TODO ? +CGREG
+
+    int networkStatus;
+    if (readResponse<int, uint8_t>(_cregParser, &networkStatus, NULL) == ResponseOK) {
+        switch (networkStatus) {
+            case 0: return NoNetworkRegistrationStatus;
+            case 1: return Home;
+            case 2: return NoNetworkRegistrationStatus;
+            case 3: return Denied;
+            case 4: return UnknownNetworkRegistrationStatus;
+            default: return Denied; // rest of statuses are actually registered, but they do not support data
+        }
+    }
+
+    return UnknownNetworkRegistrationStatus;
 }
 
 NetworkTechnologies Sodaq_3Gbee::getNetworkTechnology()
@@ -413,7 +439,6 @@ ResponseTypes Sodaq_3Gbee::_csqParser(ResponseTypes& response, const char* buffe
     }
 
     return ResponseError;
-
 }
 
 // rssi in dBm
