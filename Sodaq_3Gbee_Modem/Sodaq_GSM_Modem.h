@@ -190,9 +190,6 @@ public:
     // Get International Mobile Station Identity
     virtual bool getIMSI(char* buffer, size_t size) = 0;
 
-    // Get Mobile Equipment IDentifier
-    virtual bool getMEID(char* buffer, size_t size) = 0;
-
     // Get SIM status
     virtual SimStatuses getSimStatus() = 0;
 

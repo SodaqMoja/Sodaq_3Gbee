@@ -127,22 +127,46 @@ void setup()
 
 //            debugSerial.println(sodaq_3gbee.getNetworkTechnology());
 
-            int8_t rssi;
-            uint8_t ber;
-            for (uint8_t i = 0; i < 20; i++) {
-                if (sodaq_3gbee.getRSSIAndBER(&rssi, &ber)) {
-                    debugSerial.print("RSSI:");
-                    debugSerial.print(rssi);
-                    debugSerial.print("dBm\t");
-                    debugSerial.print("BER:");
-                    debugSerial.println(ber);
-                }
-                else {
-                    debugSerial.println("something went wrong with getting rssi and ber");
-                }
+//            int8_t rssi;
+//            uint8_t ber;
+//            for (uint8_t i = 0; i < 20; i++) {
+//                if (sodaq_3gbee.getRSSIAndBER(&rssi, &ber)) {
+//                    debugSerial.print("RSSI:");
+//                    debugSerial.print(rssi);
+//                    debugSerial.print("dBm\t");
+//                    debugSerial.print("BER:");
+//                    debugSerial.println(ber);
+//                }
+//                else {
+//                    debugSerial.println("something went wrong with getting rssi and ber");
+//                }
+//
+//                delay(2000);
+//            }
 
-                delay(2000);
-            }
+//            char numberBuffer[16];
+//            if (sodaq_3gbee.getMobileDirectoryNumber(numberBuffer, sizeof(numberBuffer))) {
+//                debugSerial.print("Phone Number: ");
+//                debugSerial.println(numberBuffer);
+//            }
+//
+//            char imeiBuffer[16];
+//            if (sodaq_3gbee.getIMEI(imeiBuffer, sizeof(imeiBuffer))) {
+//                debugSerial.print("IMEI: ");
+//                debugSerial.println(imeiBuffer);
+//            }
+//
+//            char ccidBuffer[24];
+//            if (sodaq_3gbee.getCCID(ccidBuffer, sizeof(ccidBuffer))) {
+//                debugSerial.print("CCID: ");
+//                debugSerial.println(ccidBuffer);
+//            }
+//
+//            char imsiBuffer[24];
+//            if (sodaq_3gbee.getIMSI(imsiBuffer, sizeof(imsiBuffer))) {
+//                debugSerial.print("IMSI: ");
+//                debugSerial.println(imsiBuffer);
+//            }
 
 //            delay(2000);
 //            if (sodaq_3gbee.disconnect()) {

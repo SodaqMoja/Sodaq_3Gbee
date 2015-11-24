@@ -36,7 +36,6 @@ public:
     bool getIMEI(char* buffer, size_t size);
     bool getCCID(char* buffer, size_t size);
     bool getIMSI(char* buffer, size_t size);
-    bool getMEID(char* buffer, size_t size);
     SimStatuses getSimStatus();
 
     IP_t getLocalIP();
@@ -107,6 +106,9 @@ private:
     static ResponseTypes _copsParser(ResponseTypes& response, const char* buffer, size_t size, char* operatorNameBuffer, size_t* operatorNameBufferSize);
     static ResponseTypes _copsParser(ResponseTypes& response, const char* buffer, size_t size, int* networkTechnology, uint8_t* dummy);
     static ResponseTypes _csqParser(ResponseTypes& response, const char* buffer, size_t size, int* rssi, int* ber);
+    static ResponseTypes _cnumParser(ResponseTypes& response, const char* buffer, size_t size, char* numberBuffer, size_t* numberBufferSize);
+    static ResponseTypes _nakedStringParser(ResponseTypes& response, const char* buffer, size_t size, char* stringBuffer, size_t* stringBufferSize);
+    static ResponseTypes _ccidParser(ResponseTypes& response, const char* buffer, size_t size, char* ccidBuffer, size_t* ccidBufferSize);
 };
 
 extern Sodaq_3Gbee sodaq_3gbee;

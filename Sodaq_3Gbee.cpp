@@ -465,39 +465,123 @@ ResponseTypes Sodaq_3Gbee::_copsParser(ResponseTypes& response, const char* buff
 
 bool Sodaq_3Gbee::getOperatorName(char* buffer, size_t size)
 {
+    if (size > 0) {
+        buffer[0] = 0;
+    }
+
     writeLn("AT+COPS?");
 
     return (readResponse<char, size_t>(_copsParser, buffer, &size) == ResponseOK);
 }
 
+ResponseTypes Sodaq_3Gbee::_cnumParser(ResponseTypes& response, const char* buffer, size_t size, char* numberBuffer, size_t* numberBufferSize)
+{
+    if (!numberBuffer || !numberBufferSize) {
+        return ResponseError;
+    }
+
+    // TODO test with a sim that has a number
+    // TODO limit?
+    if (sscanf(buffer, "+CNUM: \"%*[^\"]\",\"%[^\"]\",%*d", numberBuffer) == 1) { // TODO is it "My Number"?
+        return ResponseEmpty;
+    }
+
+    return ResponseError;
+
+}
+
 bool Sodaq_3Gbee::getMobileDirectoryNumber(char* buffer, size_t size)
 {
-    return false;
-    // TODO: implement
+    if (size < 7 + 1) {
+        return false;
+    }
+
+    if (size > 0) {
+        buffer[0] = 0;
+    }
+
+    writeLn("AT+CNUM");
+
+    return (readResponse<char, size_t>(_cnumParser, buffer, &size) == ResponseOK);
 }
 
+ResponseTypes Sodaq_3Gbee::_nakedStringParser(ResponseTypes& response, const char* buffer, size_t size, char* stringBuffer, size_t* stringBufferSize)
+{
+    if (!stringBuffer || !stringBufferSize) {
+        return ResponseError;
+    }
+
+    if (*stringBufferSize > 0)
+    {
+        stringBuffer[0] = 0;
+        strncat(stringBuffer, buffer, *stringBufferSize - 1);
+
+        return ResponseEmpty;
+    }
+
+    return ResponseError;
+}
+
+// needs at least 16 bytes buffer
 bool Sodaq_3Gbee::getIMEI(char* buffer, size_t size)
 {
-    return false;
-    // TODO: implement
+    if (size < 15 + 1) {
+        return false;
+    }
+
+    if (size > 0) {
+        buffer[0] = 0;
+    }
+
+    writeLn("AT+CGSN");
+
+    return (readResponse<char, size_t>(_nakedStringParser, buffer, &size) == ResponseOK);
 }
 
+ResponseTypes Sodaq_3Gbee::_ccidParser(ResponseTypes& response, const char* buffer, size_t size, char* ccidBuffer, size_t* ccidBufferSize)
+{
+    if (!ccidBuffer || !ccidBufferSize) {
+        return ResponseError;
+    }
+
+    // TODO limit?
+    if (sscanf(buffer, "+CCID: %s", ccidBuffer) == 1) {
+        return ResponseEmpty;
+    }
+
+    return ResponseError;
+}
+
+// needs at least 21 bytes buffer
 bool Sodaq_3Gbee::getCCID(char* buffer, size_t size)
 {
-    return false;
-    // TODO: implement
+    if (size < 20 + 1) {
+        return false;
+    }
+
+    if (size > 0) {
+        buffer[0] = 0;
+    }
+
+    writeLn("AT+CCID");
+
+    return (readResponse<char, size_t>(_ccidParser, buffer, &size) == ResponseOK);
 }
 
+// needs at least 16 bytes buffer
 bool Sodaq_3Gbee::getIMSI(char* buffer, size_t size)
 {
-    return false;
-    // TODO: implement
-}
+    if (size < 15 + 1) {
+        return false;
+    }
 
-bool Sodaq_3Gbee::getMEID(char* buffer, size_t size)
-{
-    return false;
-    // TODO: implement
+    if (size > 0) {
+        buffer[0] = 0;
+    }
+
+    writeLn("AT+CIMI");
+
+    return (readResponse<char, size_t>(_nakedStringParser, buffer, &size) == ResponseOK);
 }
 
 ResponseTypes Sodaq_3Gbee::_cpinParser(ResponseTypes& response, const char* buffer, size_t size, SimStatuses* parameter, uint8_t* dummy)
