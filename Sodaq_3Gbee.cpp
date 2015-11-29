@@ -767,7 +767,7 @@ int Sodaq_3Gbee::createSocket(Protocols protocol, uint16_t localPort)
     return SOCKET_FAIL;
 }
 
-size_t Sodaq_3Gbee::ipToStirng(IP_t ip, char* buffer, size_t size)
+size_t Sodaq_3Gbee::ipToString(IP_t ip, char* buffer, size_t size)
 {
     return snprintf(buffer, size, IP_FORMAT, IP_TO_TUPLE(ip));
 }
@@ -841,7 +841,7 @@ bool Sodaq_3Gbee::connectSocket(uint8_t socket, const char* host, uint16_t port)
     }
     else {
         usePassedHost = false;
-        if (ipToStirng(getHostIP(host), ipBuffer, sizeof(ipBuffer)) <= 0) {
+        if (ipToString(getHostIP(host), ipBuffer, sizeof(ipBuffer)) <= 0) {
             return false;
         }
     }

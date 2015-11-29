@@ -93,7 +93,7 @@ private:
     uint16_t _socketPendingBytes[7]; // TODO add getter
 
     static bool startsWith(const char* pre, const char* str);
-    static size_t ipToStirng(IP_t ip, char* buffer, size_t size);
+    static size_t ipToString(IP_t ip, char* buffer, size_t size);
     static bool isValidIPv4(const char* str);
     bool setSimPin(const char* simPin);
     bool isConnected(); // TODO move/refactor into Sodaq_GSM_Modem
