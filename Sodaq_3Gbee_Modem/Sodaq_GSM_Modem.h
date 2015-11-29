@@ -64,6 +64,9 @@ enum Protocols {
 enum HttpRequestTypes {
     POST,
     GET,
+    HEAD,
+    DELETE,
+    PUT,
 };
 
 enum ResponseTypes {
