@@ -19,6 +19,8 @@
 #define SODAQ_GSM_TERMINATOR CRLF
 #endif
 
+#define SODAQ_GSM_TERMINATOR_LEN (sizeof(SODAQ_GSM_TERMINATOR) - 1) // without the NULL terminator
+
 typedef void (*BaudRateChangeCallbackPtr)(uint32_t newBaudrate);
 
 // TODO handle Watchdog, also use a define to turn handling on/off
@@ -31,7 +33,7 @@ enum AuthorizationTypes {
 };
 
 enum NetworkRegistrationStatuses {
-    UnknownNetworkRegistrationStatus,
+    UnknownNetworkRegistrationStatus = 0,
     Denied,
     NoNetworkRegistrationStatus,
     Home,
@@ -39,7 +41,7 @@ enum NetworkRegistrationStatuses {
 };
 
 enum NetworkTechnologies {
-    UnknownNetworkTechnology,
+    UnknownNetworkTechnology = 0,
     GSM,
     EDGE,
     UTRAN,
@@ -50,23 +52,24 @@ enum NetworkTechnologies {
 };
 
 enum SimStatuses {
-    SimStatusUnknown,
+    SimStatusUnknown = 0,
     SimMissing,
     SimNeedsPin,
     SimReady,
 };
 
 enum Protocols {
-    TCP,
+    TCP = 0,
     UDP,
 };
 
 enum HttpRequestTypes {
-    POST,
+    POST = 0,
     GET,
     HEAD,
     DELETE,
     PUT,
+    HttpRequestTypesMAX = PUT,
 };
 
 enum ResponseTypes {
@@ -110,7 +113,10 @@ protected:
 
     // Flag to make sure the buffers are not allocated more than once.
     bool _isBufferInitialized;
+
     char* _inputBuffer;
+
+    uint32_t _timeout;
 
     SwitchableDevice* _sd;
 
@@ -120,10 +126,16 @@ protected:
     void initBuffer();
 
     void setModemStream(Stream& stream);
+    
+    int timedRead() const;
 
+    size_t readBytesUntil(char terminator, char * buffer, size_t length);
+
+    size_t readBytes(char * buffer, size_t length);
+    
     // Reads a line from the device stream into the "buffer" starting at the "start" position of the buffer.
     // Returns the number of bytes read.
-    size_t readLn(char* buffer, size_t size, size_t start = 0, long timeout = DEFAULT_TIMEOUT);
+    size_t readLn(char* buffer, size_t size, long timeout = DEFAULT_TIMEOUT);
 
     // Reads a line from the device stream into the input buffer.
     // Returns the number of bytes read.
@@ -210,7 +222,7 @@ public:
     virtual bool closeSocket(uint8_t socket) = 0;
 
     // HTTP
-    virtual size_t httpRequest(const char* url, const char* buffer, size_t size, HttpRequestTypes requestType = GET, char* responseBuffer = NULL, size_t responseSize = 0) = 0;
+    virtual size_t httpRequest(const char* url, uint16_t port, const char* endpoint, HttpRequestTypes requestType = GET, char* responseBuffer = NULL, size_t responseSize = 0, const char* sendBuffer = NULL, size_t sendSize = 0) = 0;
 
     // Ftp
     virtual bool openFtpConnection(const char* server, const char* username, const char* password) = 0;

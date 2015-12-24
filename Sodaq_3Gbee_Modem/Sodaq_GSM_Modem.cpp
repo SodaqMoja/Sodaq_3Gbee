@@ -15,8 +15,10 @@ Sodaq_GSM_Modem::Sodaq_GSM_Modem() :
     _modemStream(0),
     _diagStream(0),
     _inputBufferSize(SODAQ_GSM_MODEM_DEFAULT_INPUT_BUFFER_SIZE),
-    _inputBuffer(0),
-    _sd(0)
+    _inputBuffer(0), 
+    _timeout(DEFAULT_TIMEOUT),
+    _sd(0), 
+    _baudRateChangeCallbackPtr(0)
 {
     this->_isBufferInitialized = false;
 }
@@ -96,23 +98,76 @@ void Sodaq_GSM_Modem::setModemStream(Stream& stream)
     this->_modemStream = &stream;
 }
 
+int Sodaq_GSM_Modem::timedRead() const
+{
+    int c;
+    uint32_t _startMillis = millis();
+    
+    do {
+        c = _modemStream->read();
+        if (c >= 0) {
+            return c;
+        }
+    } while (millis() - _startMillis < _timeout);
+    
+    return -1; // -1 indicates timeout
+}
+
+size_t Sodaq_GSM_Modem::readBytesUntil(char terminator, char *buffer, size_t length)
+{
+    if (length < 1) {
+        return 0;
+    }
+
+    size_t index = 0;
+    while (index < length) {
+        int c = timedRead();
+        if (c < 0 || c == terminator) {
+            break;
+        }
+        *buffer++ = static_cast<char>(c);
+        index++;
+    }
+
+    // TODO distinguise timeout from empty string?
+    // TODO return error for overflow?
+    return index; // return number of characters, not including null terminator
+}
+
+size_t Sodaq_GSM_Modem::readBytes(char *buffer, size_t length)
+{
+    size_t count = 0;
+    while (count < length) {
+        int c = timedRead();
+        if (c < 0) {
+            break;
+        }
+        
+        *buffer++ = static_cast<char>(c);
+        count++;
+    }
+
+    // TODO distinguise timeout from empty string?
+    // TODO return error for overflow?
+    return count;
+}
+
 // Reads a line from the device stream into the "buffer" and returns it starting at the "start" position of the buffer received, without the terminator.
 // Returns the number of bytes read.
-size_t Sodaq_GSM_Modem::readLn(char* buffer, size_t size, size_t start, long timeout) // TODO: remove start?
+// terminates string
+size_t Sodaq_GSM_Modem::readLn(char* buffer, size_t size, long timeout)
 {
-    this->_modemStream->setTimeout(timeout);
-    // TODO custom implement readBytesUntil to distinguise timeout from empty string?
-    // TODO custom implement readBytesUntil to watch out about buffer not being enough to reach terminator
-    int len = this->_modemStream->readBytesUntil('\n', buffer + start, size);
+    _timeout = timeout;
+    size_t len = readBytesUntil(SODAQ_GSM_TERMINATOR[SODAQ_GSM_TERMINATOR_LEN - 1], buffer, size);
 
-    // TODO configurable terminator LF/CR vs CRLF
-    this->_inputBuffer[start + len - 1] = 0; // bytes until \n always end with \r, so get rid of it (-1)
-    len -= 1;
-
-    if (len > 0) {
-        debugPrint("[readLn]: ");
-        debugPrintLn(buffer + start);
+    // check if the terminator is more than 1 characters, then check if the first character of it exists 
+    // in the calculated position and terminate the string there
+    if ((SODAQ_GSM_TERMINATOR_LEN > 1) && (_inputBuffer[len - (SODAQ_GSM_TERMINATOR_LEN - 1)] == SODAQ_GSM_TERMINATOR[0])) {
+        len -= SODAQ_GSM_TERMINATOR_LEN - 1;
     }
+
+    // terminate string
+    _inputBuffer[len] = 0;
 
     return len;
 }
