@@ -47,7 +47,7 @@ public:
     size_t socketReceive(uint8_t socket, char* buffer, size_t size);
     bool closeSocket(uint8_t socket);
 
-    size_t httpRequest(const char* url, const char* buffer, size_t size, HttpRequestTypes requestType = GET, char* responseBuffer = NULL, size_t responseSize = 0);
+    size_t httpRequest(const char* url, uint16_t port, const char* endpoint, HttpRequestTypes requestType = GET, char* responseBuffer = NULL, size_t responseSize = 0, const char* sendBuffer = NULL, size_t sendSize = 0);
 
     bool openFtpConnection(const char* server, const char* username, const char* password);
     bool closeFtpConnection();

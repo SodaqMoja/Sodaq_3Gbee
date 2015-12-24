@@ -54,7 +54,7 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size, CallbackMetho
     uint32_t from = NOW;
 
     do {
-        int count = readLn(buffer, size, 0, 2000);
+        int count = readLn(buffer, size, 2000);
         
         if (count > 0) {
             if (outSize) {
@@ -946,6 +946,9 @@ bool Sodaq_3Gbee::closeSocket(uint8_t socket)
     writeLn(socket);
 
     return (readResponse() == ResponseOK);
+// endpoint with initial "/"
+size_t Sodaq_3Gbee::httpRequest(const char* url, uint16_t port, const char* endpoint, HttpRequestTypes requestType, char* responseBuffer, size_t responseSize, const char* sendBuffer, size_t sendSize)
+{
 }
 
 size_t Sodaq_3Gbee::httpRequest(const char* url, const char* buffer, size_t size, HttpRequestTypes requestType, char* responseBuffer, size_t responseSize)
