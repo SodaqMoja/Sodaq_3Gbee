@@ -299,7 +299,7 @@ bool Sodaq_3Gbee::init(Stream& stream, const char* simPin, const char* apn, cons
 
     // enable auto network registration
     writeLn("AT+COPS=0");
-    if (readResponse() != ResponseOK) {
+    if (readResponse(NULL, 200000) != ResponseOK) {
         return false;
     }
 
@@ -870,7 +870,7 @@ bool Sodaq_3Gbee::connectSocket(uint8_t socket, const char* host, uint16_t port)
     write("\",");
     writeLn(static_cast<uint32_t>(port));
 
-    return (readResponse() == ResponseOK);
+    return (readResponse(NULL, 20000) == ResponseOK);
 }
 
 bool Sodaq_3Gbee::socketSend(uint8_t socket, const char* buffer, size_t size)
@@ -889,6 +889,7 @@ bool Sodaq_3Gbee::socketSend(uint8_t socket, const char* buffer, size_t size)
     for (size_t i = 0; i < size; ++i) {
         write(static_cast<char>(NIBBLE_TO_HEX_CHAR(HIGH_NIBBLE(buffer[i]))));
         write(static_cast<char>(NIBBLE_TO_HEX_CHAR(LOW_NIBBLE(buffer[i]))));
+        // TODO segment and check queue full?
     }
 
     writeLn("\"");
@@ -962,7 +963,8 @@ bool Sodaq_3Gbee::closeSocket(uint8_t socket)
     write("AT+USOCL=");
     writeLn(socket);
 
-    return (readResponse() == ResponseOK);
+    return (readResponse(NULL, 20000) == ResponseOK);
+}
 
 // TODO maybe return error <0 ?
 // endpoint with initial "/"
@@ -1113,7 +1115,7 @@ size_t Sodaq_3Gbee::readFile(const char* filename, char* buffer, size_t size)
     
     //sanity check
     if (!buffer || size == 0) {
-    return 0;
+        return 0;
     }
     
     // first, make sure the buffer is sufficient
