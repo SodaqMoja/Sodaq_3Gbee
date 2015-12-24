@@ -804,7 +804,7 @@ bool Sodaq_3Gbee::isValidIPv4(const char* str)
 
         // Check numeric
         if ((*str < '0') || (*str > '9')) {
-            return true;
+            return false;
         }
 
         // Accumulate and check segment
