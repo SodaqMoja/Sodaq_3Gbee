@@ -55,6 +55,7 @@ public:
     bool socketSend(uint8_t socket, const char* buffer, size_t size);
     size_t socketReceive(uint8_t socket, char* buffer, size_t size);
     bool closeSocket(uint8_t socket);
+    void waitForSocketToCloseByRemote(uint8_t socket);
 
     size_t httpRequest(const char* url, uint16_t port, const char* endpoint, HttpRequestTypes requestType = GET, char* responseBuffer = NULL, size_t responseSize = 0, const char* sendBuffer = NULL, size_t sendSize = 0);
 
@@ -105,6 +106,7 @@ protected:
 private:
     uint16_t _socketPendingBytes[7]; // TODO add getter
     tribool_t _httpRequestSuccessBit[HttpRequestTypesMAX];
+    bool _socketClosedBit[7];
 
     static bool startsWith(const char* pre, const char* str);
     static size_t ipToString(IP_t ip, char* buffer, size_t size);

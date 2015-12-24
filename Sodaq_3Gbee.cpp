@@ -88,6 +88,8 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size, CallbackMetho
                     debugPrint(param1);
                     debugPrint(": ");
                     debugPrintLn("closed by remote");
+
+                    _socketClosedBit[param1] = true;
                 }
             }
             else if (sscanf(buffer, "+UUHTTPCR: 0, %d, %d", &param1, &param2) == 2) {
@@ -863,6 +865,7 @@ bool Sodaq_3Gbee::connectSocket(uint8_t socket, const char* host, uint16_t port)
         }
     }
 
+    _socketClosedBit[socket] = false;
     write("AT+USOCO=");
     write(socket);
     write(",\"");
@@ -964,6 +967,18 @@ bool Sodaq_3Gbee::closeSocket(uint8_t socket)
     writeLn(socket);
 
     return (readResponse(NULL, 20000) == ResponseOK);
+}
+
+void Sodaq_3Gbee::waitForSocketToCloseByRemote(uint8_t socket)
+{
+    debugPrint("[waitForSocketToCloseByRemote]: ");
+    debugPrintLn(socket);
+
+    uint32_t start = millis();
+
+    while (isAlive() && (!_socketClosedBit[socket]) && (!TIMEOUT(start, 30000))) {
+        delay(5);
+    };
 }
 
 // TODO maybe return error <0 ?
