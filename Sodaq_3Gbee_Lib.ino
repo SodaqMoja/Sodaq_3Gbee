@@ -1,6 +1,9 @@
 #include "Sodaq_3Gbee.h"
 #include "SD_Mbili_Xbee.h"
 
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+
 // MBili
 #define debugSerial Serial
 
@@ -15,7 +18,23 @@
 //#define USERNAME NULL
 //#define PASSWORD NULL
 
-#define DNS_TEST
+//#define TEST_DNS
+//#define TEST_SOCKETS
+//#define TEST_NETWORK_INFO
+//#define TEST_SIM_DEVICE_INFO
+//#define TEST_FILESYSTEM
+#define TEST_HTTP
+#define TEST_FTP
+#define TEST_SMS
+
+void printToLen(const char* buffer, size_t len)
+{
+    for (size_t i = 0; i < len; i++) {
+        debugSerial.print(buffer[i]);
+    }
+
+    debugSerial.println();
+}
 
 void printIpTuple(uint8_t o1, uint8_t o2, uint8_t o3, uint8_t o4)
 {
@@ -26,35 +45,6 @@ void printIpTuple(uint8_t o1, uint8_t o2, uint8_t o3, uint8_t o4)
     debugSerial.print(o3);
     debugSerial.print(".");
     debugSerial.print(o4);
-}
-
-void testDNS()
-{
-    delay(1000);
-    debugSerial.println();
-
-    IP_t ip;
-    debugSerial.println("nslookup(\"www.google.com\")");
-    ip = sodaq_3gbee.getHostIP("www.google.com");
-    printIpTuple(IP_TO_TUPLE(ip));
-    debugSerial.println();
-
-    delay(1000);
-    debugSerial.println();
-
-    debugSerial.println("nslookup(\"www.sodaq.com\") [== 149.210.181.239]");
-    ip = sodaq_3gbee.getHostIP("www.sodaq.com");
-    printIpTuple(IP_TO_TUPLE(ip));
-    debugSerial.println();
-
-    delay(1000);
-    debugSerial.println();
-
-    // this should fail and show 0.0.0.0
-    debugSerial.println("nslookup(\"www.odiygsifugvhfdkl.com\") [should fail]");
-    ip = sodaq_3gbee.getHostIP("www.odiygsifugvhfdkl.com");
-    printIpTuple(IP_TO_TUPLE(ip));
-    debugSerial.println();
 }
 
 void changeModemBaudrate(uint32_t newBaudrate)
@@ -93,95 +83,174 @@ void setup()
             debugSerial.println();
             debugSerial.println();
 
-//            testDNS();
+            delay(1000);
+            debugSerial.println();
 
-//            uint8_t socket = sodaq_3gbee.createSocket(TCP);
-//            if (sodaq_3gbee.connectSocket(socket, "54.175.103.105", 30000)) {
-//                debugSerial.println("socket connected");
-//
-//                sodaq_3gbee.socketSend(socket, "123456789", 9);
-//                for (int i = 0; i < 10; i++) {
-//                    sodaq_3gbee.isAlive(); // exploit this to allow URC to be read
-//                }
-//
-//                char receiveBuffer[128];
-//                size_t bytesRead = sodaq_3gbee.socketReceive(socket, receiveBuffer, sizeof(receiveBuffer));
-//
-//                debugSerial.println();
-//                debugSerial.println();
-//                debugSerial.print("Bytes read: ");
-//                debugSerial.println(bytesRead);
-//
-//                for (size_t i = 0; i < bytesRead; i++)
-//                {
-//                    debugSerial.print(receiveBuffer[i]);
-//                }
-//
-//                debugSerial.println();
-//            }
+#ifdef TEST_DNS
+            {
+                IP_t ip;
+                debugSerial.println("nslookup(\"www.google.com\")");
+                ip = sodaq_3gbee.getHostIP("www.google.com");
+                printIpTuple(IP_TO_TUPLE(ip));
+                debugSerial.println();
 
-//            char operatorBuffer[16];
-//            if (sodaq_3gbee.getOperatorName(operatorBuffer, sizeof(operatorBuffer))) {
-//                debugSerial.println(operatorBuffer);
-//            }
+                delay(1000);
+                debugSerial.println();
 
-//            debugSerial.println(sodaq_3gbee.getNetworkTechnology());
-//            debugSerial.println(sodaq_3gbee.getNetworkStatus());
+                debugSerial.println("nslookup(\"www.sodaq.com\") [== 149.210.181.239]");
+                ip = sodaq_3gbee.getHostIP("www.sodaq.com");
+                printIpTuple(IP_TO_TUPLE(ip));
+                debugSerial.println();
 
-//            int8_t rssi;
-//            uint8_t ber;
-//            for (uint8_t i = 0; i < 20; i++) {
-//                if (sodaq_3gbee.getRSSIAndBER(&rssi, &ber)) {
-//                    debugSerial.print("RSSI:");
-//                    debugSerial.print(rssi);
-//                    debugSerial.print("dBm\t");
-//                    debugSerial.print("BER:");
-//                    debugSerial.println(ber);
-//                }
-//                else {
-//                    debugSerial.println("something went wrong with getting rssi and ber");
-//                }
-//
-//                delay(2000);
-//            }
+                delay(1000);
+                debugSerial.println();
 
-//            char numberBuffer[16];
-//            if (sodaq_3gbee.getMobileDirectoryNumber(numberBuffer, sizeof(numberBuffer))) {
-//                debugSerial.print("Phone Number: ");
-//                debugSerial.println(numberBuffer);
-//            }
-//
-//            char imeiBuffer[16];
-//            if (sodaq_3gbee.getIMEI(imeiBuffer, sizeof(imeiBuffer))) {
-//                debugSerial.print("IMEI: ");
-//                debugSerial.println(imeiBuffer);
-//            }
-//
-//            char ccidBuffer[24];
-//            if (sodaq_3gbee.getCCID(ccidBuffer, sizeof(ccidBuffer))) {
-//                debugSerial.print("CCID: ");
-//                debugSerial.println(ccidBuffer);
-//            }
-//
-//            char imsiBuffer[24];
-//            if (sodaq_3gbee.getIMSI(imsiBuffer, sizeof(imsiBuffer))) {
-//                debugSerial.print("IMSI: ");
-//                debugSerial.println(imsiBuffer);
-//            }
-
-            char writeBuffer[] = "this is, this is, this is a simple\r\ntest!";
-            char readBuffer[64];
-            sodaq_3gbee.writeFile("test_file", writeBuffer, sizeof(writeBuffer));
-            
-            size_t count = sodaq_3gbee.readFile("test_file", readBuffer, sizeof(readBuffer));
-            debugSerial.print("count: "); debugSerial.println(count);
-            
-            for (uint32_t i = 0; i < count; i++) {
-                debugSerial.print(readBuffer[i]);
+                // this should fail and show 0.0.0.0
+                debugSerial.println("nslookup(\"www.odiygsifugvhfdkl.com\") [should fail]");
+                ip = sodaq_3gbee.getHostIP("www.odiygsifugvhfdkl.com");
+                printIpTuple(IP_TO_TUPLE(ip));
+                debugSerial.println();
             }
-            debugSerial.println("");
-            
-            sodaq_3gbee.deleteFile("test_file");
+#endif
+
+#ifdef TEST_SOCKETS
+            {
+                uint8_t socket = sodaq_3gbee.createSocket(TCP);
+                if (sodaq_3gbee.connectSocket(socket, "54.175.103.105", 30000)) {
+                    debugSerial.println("socket connected");
+
+                    sodaq_3gbee.socketSend(socket, "123456789", 9);
+                    for (int i = 0; i < 10; i++) {
+                        sodaq_3gbee.isAlive(); // exploit this to allow URC to be read
+                    }
+
+                    char receiveBuffer[128];
+                    size_t bytesRead = sodaq_3gbee.socketReceive(socket, receiveBuffer, sizeof(receiveBuffer));
+
+                    debugSerial.println();
+                    debugSerial.println();
+                    debugSerial.print("Bytes read: ");
+                    debugSerial.println(bytesRead);
+
+                    for (size_t i = 0; i < bytesRead; i++)
+                    {
+                        debugSerial.print(receiveBuffer[i]);
+                    }
+
+                    debugSerial.println();
+                }
+            }
+#endif
+
+#ifdef TEST_NETWORK_INFO
+            {
+                char operatorBuffer[16];
+                if (sodaq_3gbee.getOperatorName(operatorBuffer, sizeof(operatorBuffer))) {
+                    debugSerial.println(operatorBuffer);
+                }
+
+                debugSerial.println(sodaq_3gbee.getNetworkTechnology());
+                debugSerial.println(sodaq_3gbee.getNetworkStatus());
+
+                int8_t rssi;
+                uint8_t ber;
+                for (uint8_t i = 0; i < 20; i++) {
+                    if (sodaq_3gbee.getRSSIAndBER(&rssi, &ber)) {
+                        debugSerial.print("RSSI:");
+                        debugSerial.print(rssi);
+                        debugSerial.print("dBm\t");
+                        debugSerial.print("BER:");
+                        debugSerial.println(ber);
+                    }
+                    else {
+                        debugSerial.println("something went wrong with getting rssi and ber");
+                    }
+
+                    delay(2000);
+                }
+            }
+#endif
+
+#ifdef TEST_SIM_DEVICE_INFO
+            {
+                char numberBuffer[16];
+                if (sodaq_3gbee.getMobileDirectoryNumber(numberBuffer, sizeof(numberBuffer))) {
+                    debugSerial.print("Phone Number: ");
+                    debugSerial.println(numberBuffer);
+                }
+
+                char imeiBuffer[16];
+                if (sodaq_3gbee.getIMEI(imeiBuffer, sizeof(imeiBuffer))) {
+                    debugSerial.print("IMEI: ");
+                    debugSerial.println(imeiBuffer);
+                }
+
+                char ccidBuffer[24];
+                if (sodaq_3gbee.getCCID(ccidBuffer, sizeof(ccidBuffer))) {
+                    debugSerial.print("CCID: ");
+                    debugSerial.println(ccidBuffer);
+                }
+
+                char imsiBuffer[24];
+                if (sodaq_3gbee.getIMSI(imsiBuffer, sizeof(imsiBuffer))) {
+                    debugSerial.print("IMSI: ");
+                    debugSerial.println(imsiBuffer);
+                }
+            }
+#endif
+
+#ifdef TEST_FILESYSTEM
+            {
+                char writeBuffer[] = "this is, this is, this is a simple\r\ntest!";
+                char readBuffer[64];
+                sodaq_3gbee.writeFile("test_file", writeBuffer, sizeof(writeBuffer));
+
+                size_t count = sodaq_3gbee.readFile("test_file", readBuffer, sizeof(readBuffer));
+                debugSerial.print("count: "); debugSerial.println(count);
+
+                printToLen(readBuffer, count);
+
+                sodaq_3gbee.deleteFile("test_file");
+            }
+#endif
+
+#ifdef TEST_HTTP
+            {
+                // GET
+                char httpBuffer[512];
+                size_t size = sodaq_3gbee.httpRequest("httpbin.org", 80, "/ip", GET, httpBuffer, sizeof(httpBuffer));
+                printToLen(httpBuffer, size);
+            }
+
+            {
+                // POST
+                char postRawData[] = "testfield=test&someotherfield=test2";
+                char postDataHeaders[] = "User-Agent: HTTPTool/1.0\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: " STR(sizeof(postData)-1) "\r\n";
+                char postData[sizeof(postRawData) + sizeof(postDataHeaders) - 1];
+
+                memcpy(postData, postDataHeaders, sizeof(postDataHeaders)-1);
+                memcpy(postData + sizeof(postDataHeaders) - 1, postRawData, sizeof(postRawData));
+
+                char httpBuffer[1024];
+                size_t size = sodaq_3gbee.httpRequest("httpbin.org", 80, "/post", POST, httpBuffer, sizeof(httpBuffer), postData, sizeof(postData));
+                printToLen(httpBuffer, size);
+            }
+#endif
+
+#ifdef TEST_FTP
+            {
+
+            }
+#endif
+
+#ifdef TEST_SMS
+            {
+
+            }
+#endif
+
+            //sd_mbili_xbee.off();
+
 //            delay(2000);
 //            if (sodaq_3gbee.disconnect()) {
 //                debugSerial.println("Modem was successfully disconnected.");
@@ -201,11 +270,11 @@ void loop()
 {
     while (debugSerial.available())
     {
-        modemSerial.write((char)debugSerial.read());
+        modemSerial.write(static_cast<char>(debugSerial.read()));
     }
 
     while (modemSerial.available())
     {
-        debugSerial.write((char)modemSerial.read());
+        debugSerial.write(static_cast<char>(modemSerial.read()));
     }
 }

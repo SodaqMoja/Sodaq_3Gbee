@@ -40,6 +40,8 @@
 #define DEFAULT_PROFILE "0"
 #define HIGH_BAUDRATE 57600
 #define MAX_SOCKET_BUFFER 512
+#define DEFAULT_HTTP_SEND_TMP_FILENAME "http_tmp_put_0"
+#define DEFAULT_HTTP_RECEIVE_TMP_FILENAME "http_last_response_0"
 
 Sodaq_3Gbee sodaq_3gbee;
 
@@ -77,7 +79,6 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size, CallbackMetho
                 debugPrint(param2);
                 debugPrintLn("bytes pending");
                 if (static_cast<uint16_t>(param1) < ARRAY_SIZE(_socketPendingBytes)) {
-
                     _socketPendingBytes[param1] = param2;
                 }
             }
@@ -87,6 +88,22 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size, CallbackMetho
                     debugPrint(param1);
                     debugPrint(": ");
                     debugPrintLn("closed by remote");
+                }
+            }
+            else if (sscanf(buffer, "+UUHTTPCR: 0, %d, %d", &param1, &param2) == 2) {
+                int requestType = _httpModemIndexToRequestType(static_cast<uint16_t>(param1));
+                if (requestType >= 0) {
+                    debugPrint("HTTP Result for request type ");
+                    debugPrint(requestType);
+                    debugPrint(": ");
+                    debugPrintLn(param2);
+
+                    if (param2 == 0) {
+                        _httpRequestSuccessBit[requestType] = TriBoolFalse;
+                    }
+                    else if (param2 == 1) {
+                        _httpRequestSuccessBit[requestType] = TriBoolTrue;
+                    }
                 }
             }
 
@@ -946,12 +963,108 @@ bool Sodaq_3Gbee::closeSocket(uint8_t socket)
     writeLn(socket);
 
     return (readResponse() == ResponseOK);
+
+// TODO maybe return error <0 ?
 // endpoint with initial "/"
 size_t Sodaq_3Gbee::httpRequest(const char* url, uint16_t port, const char* endpoint, HttpRequestTypes requestType, char* responseBuffer, size_t responseSize, const char* sendBuffer, size_t sendSize)
 {
+    // reset http profile 0
+    writeLn("AT+UHTTP=0");
+    if (readResponse() != ResponseOK) {
+        return 0;
+    }
+
+    deleteFile(DEFAULT_HTTP_RECEIVE_TMP_FILENAME); // cleanup the file first (if exists)
+
+    if (requestType > HttpRequestTypesMAX) {
+        debugPrintLn(DEBUG_STR_ERROR "Unknown request type!");
+        return 0;
+    }
+
+    // set server domain
+    write("AT+UHTTP=0,");
+    write(isValidIPv4(url) ? "0,\"" : "1,\"");
+    write(url);
+    writeLn("\"");
+    if (readResponse() != ResponseOK) {
+        return 0;
+    }
+
+    // set port
+    if (port != 80) {
+        write("AT+UHTTP=0,5,");
+        writeLn(static_cast<uint32_t>(port));
+
+        if (readResponse() != ResponseOK) {
+            return 0;
+        }
+    }
+
+    // before starting the actual http request, create any files needed in the fs of the modem
+    // that way there is a chance to abort sending the http req command in case of an fs error
+    if (requestType == PUT || requestType == POST) {
+        if (!sendBuffer || sendSize == 0) {
+            debugPrintLn(DEBUG_STR_ERROR "There is no sendBuffer or sendSize set!");
+            return 0;
+        }
+
+        deleteFile(DEFAULT_HTTP_SEND_TMP_FILENAME); // cleanup the file first (if exists)
+
+        if (!writeFile(DEFAULT_HTTP_SEND_TMP_FILENAME, sendBuffer, sendSize)) {
+            debugPrintLn(DEBUG_STR_ERROR "Could not create the http tmp file!");
+            return 0;
+        }
+    }
+
+    // reset the success bit before calling a new request
+    _httpRequestSuccessBit[requestType] = TriBoolUndefined;
+
+    write("AT+UHTTPC=0,");
+    write(static_cast<uint8_t>(_httpRequestTypeToModemIndex(requestType)));
+    write(",\"");
+    write(endpoint);
+    write("\",\"\""); // empty filename = default = "http_last_response_0" (DEFAULT_HTTP_RECEIVE_TMP_FILENAME)
+
+    // NOTE: a file that includes the buffer to send has been created already
+    if (requestType == PUT) {
+        writeLn(",\"" DEFAULT_HTTP_SEND_TMP_FILENAME "\""); // param1: file from filesystem to send
+    }
+    else if (requestType == POST) {
+        write(",\"" DEFAULT_HTTP_SEND_TMP_FILENAME "\""); // param1: file from filesystem to send
+        writeLn(",1"); // param2: content type, 1=text/plain
+        // TODO consider making the content type a parameter
+    } else {
+        writeLn("");
+    }
+
+    if (readResponse() != ResponseOK) {
+        return 0;
+    }
+
+    // check for success while checking URCs
+    uint32_t start = millis();
+    while ((_httpRequestSuccessBit[requestType] == TriBoolUndefined) && !TIMEOUT(start, 30000)) {
+        isAlive();
+        delay(5);
+    }
+
+    if (_httpRequestSuccessBit[requestType] == TriBoolTrue) {
+        if (responseBuffer && responseSize > 0) {
+            return readFile(DEFAULT_HTTP_RECEIVE_TMP_FILENAME, responseBuffer, responseSize);
+        }
+    }
+    else if (_httpRequestSuccessBit[requestType] == TriBoolFalse) {
+        debugPrintLn(DEBUG_STR_ERROR "An error occured with the http request!");
+        return 0;
+    }
+    else {
+        debugPrintLn(DEBUG_STR_ERROR "Timed out waiting for a response for the http request!");
+        return 0;
+    }
+
+    return 0;
 }
 
-size_t Sodaq_3Gbee::httpRequest(const char* url, const char* buffer, size_t size, HttpRequestTypes requestType, char* responseBuffer, size_t responseSize)
 ResponseTypes Sodaq_3Gbee::_ulstfileParser(ResponseTypes& response, const char* buffer, size_t size, uint32_t* filesize, uint8_t* dummy)
 {
     if (!filesize) {
@@ -963,6 +1076,34 @@ ResponseTypes Sodaq_3Gbee::_ulstfileParser(ResponseTypes& response, const char* 
     }
 
     return ResponseError;
+}
+
+// maps the given requestType to the index the modem recognizes, -1 if error
+int8_t Sodaq_3Gbee::_httpRequestTypeToModemIndex(HttpRequestTypes requestType)
+{
+    static uint8_t mapping[] = {
+        4, // POST (0)
+        1, // GET (1)
+        0, // HEAD (2)
+        2, // DELETE (3)
+        3, // PUT (4)
+    };
+
+    return (requestType < sizeof(mapping)) ? mapping[requestType] : -1;
+}
+
+// HttpRequestTypes if successful, -1 if not
+int8_t Sodaq_3Gbee::_httpModemIndexToRequestType(uint8_t modemIndex)
+{
+    static uint8_t mapping[] = {
+        HEAD,
+        GET,
+        DELETE,
+        PUT,
+        POST,
+    };
+
+    return (modemIndex < sizeof(mapping)) ? mapping[modemIndex] : -1;
 }
 
 // no string termination

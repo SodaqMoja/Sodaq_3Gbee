@@ -10,6 +10,15 @@
 // TODO this needs to be set in the compiler directives. Find something else to do
 #define SODAQ_GSM_TERMINATOR CRLF
 
+enum TriBoolStates
+{
+    TriBoolFalse,
+    TriBoolTrue,
+    TriBoolUndefined
+};
+
+typedef TriBoolStates tribool_t;
+
 typedef ResponseTypes(*CallbackMethodPtr)(ResponseTypes& response, const char* buffer, size_t size, void* parameter, void* parameter2);
 
 class Sodaq_3Gbee: public Sodaq_GSM_Modem {
@@ -95,6 +104,7 @@ protected:
     };
 private:
     uint16_t _socketPendingBytes[7]; // TODO add getter
+    tribool_t _httpRequestSuccessBit[HttpRequestTypesMAX];
 
     static bool startsWith(const char* pre, const char* str);
     static size_t ipToString(IP_t ip, char* buffer, size_t size);
@@ -116,6 +126,9 @@ private:
     static ResponseTypes _ccidParser(ResponseTypes& response, const char* buffer, size_t size, char* ccidBuffer, size_t* ccidBufferSize);
     static ResponseTypes _cregParser(ResponseTypes& response, const char* buffer, size_t size, int* networkStatus, uint8_t* dummy);
     static ResponseTypes _ulstfileParser(ResponseTypes& response, const char* buffer, size_t size, uint32_t* filesize, uint8_t* dummy);
+
+    static int8_t _httpRequestTypeToModemIndex(HttpRequestTypes requestType);
+    static int8_t _httpModemIndexToRequestType(uint8_t modemIndex);
 };
 
 extern Sodaq_3Gbee sodaq_3gbee;
