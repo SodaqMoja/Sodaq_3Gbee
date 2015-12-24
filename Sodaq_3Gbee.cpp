@@ -301,7 +301,7 @@ bool Sodaq_3Gbee::init(Stream& stream, const char* simPin, const char* apn, cons
 
     // enable auto network registration
     writeLn("AT+COPS=0");
-    if (readResponse(NULL, 200000) != ResponseOK) {
+    if (readResponse(NULL, 400000) != ResponseOK) {
         return false;
     }
 
@@ -391,7 +391,7 @@ bool Sodaq_3Gbee::disconnect()
 {
     writeLn("AT+UPSDA=" DEFAULT_PROFILE ",4");
 
-    return (readResponse(NULL, 30000) == ResponseOK);
+    return (readResponse(NULL, 40000) == ResponseOK);
 }
 
 ResponseTypes Sodaq_3Gbee::_cregParser(ResponseTypes& response, const char* buffer, size_t size, int* networkStatus, uint8_t* dummy)
@@ -873,7 +873,7 @@ bool Sodaq_3Gbee::connectSocket(uint8_t socket, const char* host, uint16_t port)
     write("\",");
     writeLn(static_cast<uint32_t>(port));
 
-    return (readResponse(NULL, 20000) == ResponseOK);
+    return (readResponse(NULL, 30000) == ResponseOK);
 }
 
 bool Sodaq_3Gbee::socketSend(uint8_t socket, const char* buffer, size_t size)
@@ -976,7 +976,7 @@ void Sodaq_3Gbee::waitForSocketToCloseByRemote(uint8_t socket)
 
     uint32_t start = millis();
 
-    while (isAlive() && (!_socketClosedBit[socket]) && (!TIMEOUT(start, 30000))) {
+    while (isAlive() && (!_socketClosedBit[socket]) && (!TIMEOUT(start, 60000))) {
         delay(5);
     };
 }
