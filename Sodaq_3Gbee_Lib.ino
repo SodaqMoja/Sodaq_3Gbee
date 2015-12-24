@@ -169,6 +169,19 @@ void setup()
 //                debugSerial.println(imsiBuffer);
 //            }
 
+            char writeBuffer[] = "this is, this is, this is a simple\r\ntest!";
+            char readBuffer[64];
+            sodaq_3gbee.writeFile("test_file", writeBuffer, sizeof(writeBuffer));
+            
+            size_t count = sodaq_3gbee.readFile("test_file", readBuffer, sizeof(readBuffer));
+            debugSerial.print("count: "); debugSerial.println(count);
+            
+            for (uint32_t i = 0; i < count; i++) {
+                debugSerial.print(readBuffer[i]);
+            }
+            debugSerial.println("");
+            
+            sodaq_3gbee.deleteFile("test_file");
 //            delay(2000);
 //            if (sodaq_3gbee.disconnect()) {
 //                debugSerial.println("Modem was successfully disconnected.");

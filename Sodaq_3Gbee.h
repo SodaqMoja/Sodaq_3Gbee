@@ -60,6 +60,10 @@ public:
     bool readSms(uint8_t index, char* phoneNumber, char* buffer, size_t size);
     bool deleteSms(uint8_t index);
     bool sendSms(const char* phoneNumber, const char* buffer);
+
+    size_t readFile(const char* filename, char* buffer, size_t size);
+    bool writeFile(const char* filename, const char* buffer, size_t size);
+    bool deleteFile(const char* filename);
 protected:
     ResponseTypes readResponse(char* buffer, size_t size, CallbackMethodPtr parserMethod,
         void* callbackParameter, void* callbackParameter2 = NULL, size_t* outSize = NULL, uint32_t timeout = DEFAULT_READ_MS);
@@ -97,6 +101,7 @@ private:
     static bool isValidIPv4(const char* str);
     bool setSimPin(const char* simPin);
     bool isConnected(); // TODO move/refactor into Sodaq_GSM_Modem
+    
     static ResponseTypes _cpinParser(ResponseTypes& response, const char* buffer, size_t size, SimStatuses* simStatusResult, uint8_t* dummy);
     static ResponseTypes _udnsrnParser(ResponseTypes& response, const char* buffer, size_t size, IP_t* ipResult, uint8_t* dummy);
     static ResponseTypes _upsndParser(ResponseTypes& response, const char* buffer, size_t size, IP_t* ipResult, uint8_t* dummy);
@@ -110,6 +115,7 @@ private:
     static ResponseTypes _nakedStringParser(ResponseTypes& response, const char* buffer, size_t size, char* stringBuffer, size_t* stringBufferSize);
     static ResponseTypes _ccidParser(ResponseTypes& response, const char* buffer, size_t size, char* ccidBuffer, size_t* ccidBufferSize);
     static ResponseTypes _cregParser(ResponseTypes& response, const char* buffer, size_t size, int* networkStatus, uint8_t* dummy);
+    static ResponseTypes _ulstfileParser(ResponseTypes& response, const char* buffer, size_t size, uint32_t* filesize, uint8_t* dummy);
 };
 
 extern Sodaq_3Gbee sodaq_3gbee;
