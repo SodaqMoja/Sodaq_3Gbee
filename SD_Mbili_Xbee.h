@@ -1,7 +1,7 @@
 #ifndef _SD_MBILI_XBEE_h
 #define _SD_MBILI_XBEE_h
 
-#include "Sodaq_3Gbee_Modem/Sodaq_Switchable_Device.h"
+#include "Sodaq_GSM_Modem/Sodaq_Switchable_Device.h"
 
 class SD_Mbili_Xbee : public SwitchableDevice {
 public:
