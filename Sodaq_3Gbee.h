@@ -59,7 +59,7 @@ public:
 
     size_t httpRequest(const char* url, uint16_t port, const char* endpoint, HttpRequestTypes requestType = GET, char* responseBuffer = NULL, size_t responseSize = 0, const char* sendBuffer = NULL, size_t sendSize = 0);
 
-    bool openFtpConnection(const char* server, const char* username, const char* password);
+    bool openFtpConnection(const char* server, const char* username, const char* password, FtpModes ftpMode);
     bool closeFtpConnection();
     bool openFtpFile(const char* filename, const char* path);
     bool ftpSend(const char* buffer);

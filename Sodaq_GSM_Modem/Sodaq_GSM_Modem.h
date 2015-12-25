@@ -72,6 +72,11 @@ enum HttpRequestTypes {
     HttpRequestTypesMAX = PUT,
 };
 
+enum FtpModes {
+    ACTIVE = 0,
+    PASSIVE,
+};
+
 enum ResponseTypes {
     ResponseNotFound = 0,
     ResponseOK = 1,
@@ -225,7 +230,7 @@ public:
     virtual size_t httpRequest(const char* url, uint16_t port, const char* endpoint, HttpRequestTypes requestType = GET, char* responseBuffer = NULL, size_t responseSize = 0, const char* sendBuffer = NULL, size_t sendSize = 0) = 0;
 
     // Ftp
-    virtual bool openFtpConnection(const char* server, const char* username, const char* password) = 0;
+    virtual bool openFtpConnection(const char* server, const char* username, const char* password, FtpModes ftpMode) = 0;
     virtual bool closeFtpConnection() = 0;
     virtual bool openFtpFile(const char* filename, const char* path = NULL) = 0;
     virtual bool ftpSend(const char* buffer) = 0;

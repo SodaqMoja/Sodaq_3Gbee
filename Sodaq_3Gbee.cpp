@@ -1241,10 +1241,46 @@ bool Sodaq_3Gbee::deleteFile(const char* filename)
     return (readResponse() == ResponseOK);
 }
 
-bool Sodaq_3Gbee::openFtpConnection(const char* server, const char* username, const char* password)
+bool Sodaq_3Gbee::openFtpConnection(const char* server, const char* username, const char* password, FtpModes ftpMode)
 {
-    return false;
-    // TODO: implement
+    // set server
+    write("AT+UFTP=");
+    write(isValidIPv4(server) ? "0,\"" : "1,\"");
+    write(server);
+    writeLn("\"");
+    
+    if (readResponse() != ResponseOK) {
+        return false;
+    }
+
+    // set username
+    write("AT+UFTP=2,\"");
+    write(username);
+    writeLn("\"");
+
+    if (readResponse() != ResponseOK) {
+        return false;
+    }
+
+    // set password
+    write("AT+UFTP=3,\"");
+    write(password);
+    writeLn("\"");
+
+    if (readResponse() != ResponseOK) {
+        return false;
+    }
+
+    // set passive / active
+    write("AT+UFTP=6,\"");
+    write(static_cast<uint8_t>(ftpMode == ACTIVE ? 0 : 1));
+    writeLn("\"");
+
+    if (readResponse() != ResponseOK) {
+        return false;
+    }
+
+    return true;
 }
 
 bool Sodaq_3Gbee::closeFtpConnection()

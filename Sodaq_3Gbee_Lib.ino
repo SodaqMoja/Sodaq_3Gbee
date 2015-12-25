@@ -23,7 +23,7 @@
 //#define TEST_NETWORK_INFO
 //#define TEST_SIM_DEVICE_INFO
 //#define TEST_FILESYSTEM
-#define TEST_HTTP
+//#define TEST_HTTP
 #define TEST_FTP
 #define TEST_SMS
 
@@ -239,7 +239,7 @@ void setup()
 
 #ifdef TEST_FTP
             {
-
+                sodaq_3gbee.openFtpConnection("server", "user", "pass", PASSIVE);
             }
 #endif
 
