@@ -56,7 +56,7 @@ bool Sodaq_GSM_Modem::off()
 bool Sodaq_GSM_Modem::isOn()
 {
     if (_onoff) {
-        _onoff->isOn();
+        return _onoff->isOn();
     }
 
     // No onoff. Let's assume it is on.
