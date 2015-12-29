@@ -242,6 +242,7 @@ bool Sodaq_3Gbee::init(Stream& stream, const char* simPin, const char* apn, cons
     int8_t statusPin = BEECTS;
 #endif
     sodaq_3gbee_onoff.init(vcc33Pin, onoffPin, statusPin);
+    _onoff = &sodaq_3gbee_onoff;
     on();
 
     // wait for power up
@@ -1368,6 +1369,7 @@ Sodaq_3GbeeOnOff::Sodaq_3GbeeOnOff()
 {
     _vcc33Pin = -1;
     _onoffPin = -1;
+    _statusPin = -1;
 }
 
 /*!
