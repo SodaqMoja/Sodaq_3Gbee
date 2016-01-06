@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <stdint.h>
 #include <Stream.h>
-#include "Sodaq_Switchable_Device.h"
+#include "Sodaq_OnOffBee.h"
 
 #define CR "\r"
 #define LF "\n"
@@ -104,6 +104,7 @@ typedef uint32_t IP_t;
 
 #define SOCKET_FAIL -1
 
+class Sodaq_3GbeeOnOff;
 class Sodaq_GSM_Modem {
 protected:
     // The stream that communicates with the device.
@@ -123,7 +124,7 @@ protected:
 
     uint32_t _timeout;
 
-    SwitchableDevice* _sd;
+    Sodaq_OnOffBee * _onoff;
 
     BaudRateChangeCallbackPtr _baudRateChangeCallbackPtr;
 
@@ -138,6 +139,8 @@ protected:
 
     size_t readBytes(char * buffer, size_t length);
     
+    bool isOn();
+
     // Reads a line from the device stream into the "buffer" starting at the "start" position of the buffer.
     // Returns the number of bytes read.
     size_t readLn(char* buffer, size_t size, long timeout = DEFAULT_TIMEOUT);
@@ -162,7 +165,10 @@ public:
     // Constructor
     Sodaq_GSM_Modem();
 
-    void setSwitchableDevice(SwitchableDevice& sd) { _sd = &sd; }
+    void setOnOff(Sodaq_OnOffBee & onoff) { _onoff = &onoff; }
+    bool on();
+    bool off();
+
 
     // Sets the optional "Diagnostics and Debug" stream.
     void setDiag(Stream& stream) { this->_diagStream = &stream; };
@@ -243,5 +249,6 @@ public:
     virtual bool deleteSms(uint8_t index) = 0;
     virtual bool sendSms(const char* phoneNumber, const char* buffer) = 0;
 };
+
 
 #endif
