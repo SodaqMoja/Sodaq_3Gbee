@@ -186,7 +186,7 @@ public:
 
     virtual bool setAPN(const char* apn, const char* username, const char* password) = 0;
 
-    virtual bool join(const char* simPin, const char* apn, const char* username,
+    virtual bool connect(const char* simPin, const char* apn, const char* username,
                       const char* password, AuthorizationTypes authorization = AutoDetectAutorization) = 0;
 
     virtual bool disconnect() = 0;

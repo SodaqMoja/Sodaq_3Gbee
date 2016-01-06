@@ -300,7 +300,8 @@ void Sodaq_3Gbee::init(Stream& stream, int8_t vcc33Pin, int8_t onoffPin, int8_t 
     _onoff = &sodaq_3gbee_onoff;
 }
 
-bool Sodaq_3Gbee::join(const char* simPin, const char* apn, const char* username, const char* password, AuthorizationTypes authorization)
+// also turns on the modem
+bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* username, const char* password, AuthorizationTypes authorization)
 {
     if (!on()) {
         return false;
@@ -432,6 +433,7 @@ bool Sodaq_3Gbee::join(const char* simPin, const char* apn, const char* username
 
 bool Sodaq_3Gbee::disconnect()
 {
+    // TODO also turn off the modem?
     writeLn("AT+UPSDA=" DEFAULT_PROFILE ",4");
 
     return (readResponse(NULL, 40000) == ResponseOK);

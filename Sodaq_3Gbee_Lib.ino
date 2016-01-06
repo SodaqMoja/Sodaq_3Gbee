@@ -74,7 +74,7 @@ void setup()
     sodaq_3gbee.init(modemSerial, -1, BEEDTR, BEECTS);
     debugSerial.println("Modem initialization was successful.");
 
-    if (sodaq_3gbee.join(NULL, APN, USERNAME, PASSWORD)) {
+    if (sodaq_3gbee.connect(NULL, APN, USERNAME, PASSWORD)) {
         debugSerial.println("Modem connected to the apn successfully.");
         debugSerial.println();
         debugSerial.print("Local IP: ");

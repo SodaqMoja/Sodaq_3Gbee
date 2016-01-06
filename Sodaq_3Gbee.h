@@ -29,7 +29,7 @@ public:
     uint32_t getDefaultBaudrate() { return 9600; };
 
     void init(Stream& stream, int8_t vcc33Pin, int8_t onoffPin, int8_t statusPin);
-    bool join(const char* simPin, const char* apn, const char* username, const char* password,
+    bool connect(const char* simPin, const char* apn, const char* username, const char* password,
         AuthorizationTypes authorization = AutoDetectAutorization);
     bool disconnect();
 
