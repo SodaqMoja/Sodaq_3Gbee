@@ -61,8 +61,8 @@ public:
 
     bool openFtpConnection(const char* server, const char* username, const char* password, FtpModes ftpMode);
     bool closeFtpConnection();
-    bool openFtpFile(const char* filename, const char* path);
-    bool ftpSend(const char* buffer);
+    bool openFtpFile(const char* filename, const char* path = NULL);
+    bool ftpSend(const char* buffer, size_t size);
     int ftpReceive(char* buffer, size_t size);
     bool closeFtpFile();
     

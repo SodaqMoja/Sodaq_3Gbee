@@ -1295,7 +1295,7 @@ bool Sodaq_3Gbee::openFtpFile(const char* filename, const char* path)
     // TODO: implement
 }
 
-bool Sodaq_3Gbee::ftpSend(const char* buffer)
+bool Sodaq_3Gbee::ftpSend(const char* buffer, size_t size)
 {
     return false;
     // TODO: implement

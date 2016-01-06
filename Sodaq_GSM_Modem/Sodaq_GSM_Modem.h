@@ -233,7 +233,7 @@ public:
     virtual bool openFtpConnection(const char* server, const char* username, const char* password, FtpModes ftpMode) = 0;
     virtual bool closeFtpConnection() = 0;
     virtual bool openFtpFile(const char* filename, const char* path = NULL) = 0;
-    virtual bool ftpSend(const char* buffer) = 0;
+    virtual bool ftpSend(const char* buffer, size_t size) = 0;
     virtual int ftpReceive(char* buffer, size_t size) = 0;
     virtual bool closeFtpFile() = 0;
 
