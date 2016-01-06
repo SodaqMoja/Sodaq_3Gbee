@@ -43,6 +43,7 @@
 #define DEFAULT_HTTP_SEND_TMP_FILENAME "http_tmp_put_0"
 #define DEFAULT_HTTP_RECEIVE_TMP_FILENAME "http_last_response_0"
 #define DEFAULT_FTP_TMP_FILENAME "ftp_tmp_file"
+#define CTRL_Z (static_cast<char>(0x1A))
 
 Sodaq_3Gbee sodaq_3gbee;
 
@@ -388,6 +389,12 @@ bool Sodaq_3Gbee::init(Stream& stream, const char* simPin, const char* apn, cons
 
     // cleanup tmp files
     cleanupTempFiles();
+
+    // set SMS to text mode
+    writeLn("AT+CMGF=1");
+    if (readResponse() != ResponseOK) {
+        return false;
+    }
 
     return true;
 }
@@ -1445,18 +1452,67 @@ bool Sodaq_3Gbee::closeFtpFile()
     return true;
 }
 
+ResponseTypes Sodaq_3Gbee::_cmglParser(ResponseTypes& response, const char* buffer, size_t size, int* indexList, size_t* indexListSize)
+{
+    if (!indexList || !indexListSize || *indexListSize <= 0) {
+        return ResponseError;
+    }
+
+    int index;
+    if (sscanf(buffer, "+CMGL: %d,", &index) == 1) {
+        *(indexList++) = index;
+        (*indexListSize)--;
+
+        return ResponseEmpty;
+    }
+
+    return ResponseError;
+}
+
+// TODO test
 int Sodaq_3Gbee::getSmsList(const char* statusFilter, int* indexList, size_t size)
 {
-    return 0;
-    // TODO: implement
+    write("AT+CMGL=\"");
+    write(statusFilter);
+    writeLn("\"");
+
+    size_t sizeParam = size;
+    if (readResponse<int, size_t>(_cmglParser, indexList, &sizeParam) == ResponseOK) {
+        return size - sizeParam; // the parser method subtracts from the total size when adding an index in the list
+    }
+
+    return -1;
 }
 
+ResponseTypes Sodaq_3Gbee::_cmgrParser(ResponseTypes& response, const char* buffer, size_t size, char* phoneNumber, char* smsBuffer)
+{
+    if (!phoneNumber || !smsBuffer) {
+        return ResponseError;
+    }
+
+    if (sscanf(buffer, "+CMGR: \"%*[^\"]\",\"%[^\"]", phoneNumber) == 1) {
+        return ResponseEmpty;
+    }
+    else if ((buffer[size - 2] == '\r') && (buffer[size - 1] == '\n')) {
+        memcpy(smsBuffer, buffer, size - 2);
+        smsBuffer[size - 2] = '\0';
+
+        return ResponseEmpty;
+    }
+
+    return ResponseError;
+}
+
+// TODO test
 bool Sodaq_3Gbee::readSms(uint8_t index, char* phoneNumber, char* buffer, size_t size)
 {
-    return false;
-    // TODO: implement
+    write("AT+CMGR=");
+    writeLn(index);
+
+    return (readResponse<char, char>(_cmgrParser, phoneNumber, buffer) == ResponseOK);
 }
 
+// TODO test
 bool Sodaq_3Gbee::deleteSms(uint8_t index)
 {
     write("AT+CMGD=");
@@ -1465,8 +1521,22 @@ bool Sodaq_3Gbee::deleteSms(uint8_t index)
     return (readResponse() == ResponseOK);
 }
 
+// TODO test
 bool Sodaq_3Gbee::sendSms(const char* phoneNumber, const char* buffer)
 {
+    write("AT+CMGS=\"");
+    write(phoneNumber);
+    write("\"" CR);
+
+    if (readResponse() == ResponsePrompt) {
+        for (size_t i = 0; i < strlen(buffer); i++) {
+            write(buffer[i]);
+        }
+
+        write(CTRL_Z);
+
+        return (readResponse() == ResponseOK);
+    }
+
     return false;
-    // TODO: implement
 }

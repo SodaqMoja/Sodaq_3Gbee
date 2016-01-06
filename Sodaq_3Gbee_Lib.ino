@@ -262,7 +262,24 @@ void setup()
 
 #ifdef TEST_SMS
             {
+                if (sodaq_3gbee.sendSms("0031630191744", "This is a test SMS!")) {
+                    debugSerial.println("The SMS was sent successfully!");
+                }
 
+                int indexes[128];
+                int count = sodaq_3gbee.getSmsList("ALL", indexes, sizeof(indexes));
+                if (count < 0) {
+                    debugSerial.println("SMS list error!");
+                } 
+                else {
+                    for (int i = 0; i < count; i++) {
+                        debugSerial.println(indexes[i]);
+                    }
+                }
+
+                char phoneNo[16];
+                char message[256];
+                sodaq_3gbee.readSms(1, phoneNo, message, sizeof(message));
             }
 #endif
 

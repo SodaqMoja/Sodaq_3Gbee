@@ -138,6 +138,8 @@ private:
     static ResponseTypes _ccidParser(ResponseTypes& response, const char* buffer, size_t size, char* ccidBuffer, size_t* ccidBufferSize);
     static ResponseTypes _cregParser(ResponseTypes& response, const char* buffer, size_t size, int* networkStatus, uint8_t* dummy);
     static ResponseTypes _ulstfileParser(ResponseTypes& response, const char* buffer, size_t size, uint32_t* filesize, uint8_t* dummy);
+    static ResponseTypes _cmgrParser(ResponseTypes& response, const char* buffer, size_t size, char* phoneNumber, char* smsBuffer);
+    static ResponseTypes _cmglParser(ResponseTypes& response, const char* buffer, size_t size, int* indexList, size_t* indexListSize);
 
     static int8_t _httpRequestTypeToModemIndex(HttpRequestTypes requestType);
     static int8_t _httpModemIndexToRequestType(uint8_t modemIndex);
