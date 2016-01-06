@@ -239,7 +239,24 @@ void setup()
 
 #ifdef TEST_FTP
             {
+                char loremIpsumParagraph[] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer tempor vestibulum neque, ac consectetur ligula egestas vestibulum. Nullam at diam id magna hendrerit viverra non ut nunc. Vivamus ex leo, lacinia vel congue vel, lacinia at arcu. Donec eu tincidunt ex, porttitor ultrices ante. Praesent porttitor ultricies vehicula. Aliquam erat volutpat. Interdum et malesuada fames ac ante ipsum primis in faucibus. Etiam rhoncus suscipit urna, ut mattis nisl ullamcorper id. Donec lacus leo, sodales eget faucibus eu, tincidunt sit amet lorem. Vivamus non tellus ex. Vivamus eget est eu felis feugiat lobortis. Donec ultricies ultricies placerat. Aenean condimentum quam ut mi convallis, a ultrices mi imperdiet. Curabitur laoreet eu neque vitae porttitor.";
                 sodaq_3gbee.openFtpConnection("server", "user", "pass", PASSIVE);
+                
+                sodaq_3gbee.openFtpFile("test.txt", "/test/test2/test3/");
+                sodaq_3gbee.ftpSend(loremIpsumParagraph, sizeof(loremIpsumParagraph));
+                sodaq_3gbee.closeFtpFile();
+
+                sodaq_3gbee.openFtpFile("test.txt", "test/test2/test3");
+                char buffer[1024];
+                buffer[0] = 0;
+                sodaq_3gbee.ftpReceive(buffer, sizeof(buffer));
+                sodaq_3gbee.closeFtpFile();
+
+                sodaq_3gbee.closeFtpConnection();
+
+                if (strcmp(buffer, loremIpsumParagraph) == 0) {
+                    debugSerial.println("Success: The file read from the ftp is the same as the one written!");
+                }
             }
 #endif
 
