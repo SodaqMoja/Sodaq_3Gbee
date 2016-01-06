@@ -259,34 +259,36 @@ bool Sodaq_3Gbee::isAlive()
     return (readResponse() == ResponseOK);
 }
 
-bool Sodaq_3Gbee::setAPN(const char* apn)
+bool Sodaq_3Gbee::setAPN(const char* apn, const char* username, const char* password)
 {
     write("AT+UPSD=" DEFAULT_PROFILE ",1,\"");
     write(apn);
     writeLn("\"");
 
-    return (readResponse() == ResponseOK);
-}
+    if (readResponse() != ResponseOK) {
+        return false;
+    }
 
-bool Sodaq_3Gbee::setAPNUsername(const char* username)
-{
     write("AT+UPSD=" DEFAULT_PROFILE ",2,\"");
     write(username);
     writeLn("\"");
 
-    return (readResponse() == ResponseOK);
-}
+    if (readResponse() != ResponseOK) {
+        return false;
+    }
 
-bool Sodaq_3Gbee::setAPNPassword(const char* password)
-{
     write("AT+UPSD=" DEFAULT_PROFILE ",3,\"");
     write(password);
     writeLn("\"");
 
-    return (readResponse() == ResponseOK);
+    if (readResponse() != ResponseOK) {
+        return false;
+    }
+
+    return true;
 }
 
-bool Sodaq_3Gbee::init(Stream& stream, const char* simPin, const char* apn, const char* username, const char* password, AuthorizationTypes authorization)
+void Sodaq_3Gbee::init(Stream& stream, int8_t vcc33Pin, int8_t onoffPin, int8_t statusPin)
 {
     debugPrintLn("[init] started.");
 
@@ -294,29 +296,13 @@ bool Sodaq_3Gbee::init(Stream& stream, const char* simPin, const char* apn, cons
 
     setModemStream(stream);
 
-#if 1
-    // This bit will have to be moved to the main line, and the init
-    // function needs to have parameters to pass the pin numbers
-    // These pins are for a SODAQ Mbili
-    int8_t vcc33Pin = -1;
-    int8_t onoffPin = BEEDTR;
-    int8_t statusPin = BEECTS;
-#endif
     sodaq_3gbee_onoff.init(vcc33Pin, onoffPin, statusPin);
     _onoff = &sodaq_3gbee_onoff;
-    on();
+}
 
-    // wait for power up
-    bool timeout = true;
-    for (uint8_t i = 0; i < 10; i++) {
-        if (isAlive()) {
-            timeout = false;
-            break;
-        }
-    }
-
-    if (timeout) {
-        debugPrintLn(DEBUG_STR_ERROR "No Reply from Modem");
+bool Sodaq_3Gbee::join(const char* simPin, const char* apn, const char* username, const char* password, AuthorizationTypes authorization)
+{
+    if (!on()) {
         return false;
     }
 
@@ -391,26 +377,7 @@ bool Sodaq_3Gbee::init(Stream& stream, const char* simPin, const char* apn, cons
         return false;
     }
 
-    if (*apn) {
-        if (!setAPN(apn)) {
-            return false;
-        }
-    }
-
-    if (*username) {
-        if (!setAPNUsername(username)) {
-            return false;
-        }
-    }
-
-    if (*password) {
-        if (!setAPNPassword(password)) {
-            return false;
-        }
-    }
-
-    // TODO check AT+URAT? to be 1,2 meaning prefer umts, fallback to gprs
-    // TODO keep checking network registration until done
+    // NOTE: Default +URAT = 1,2 i.e. prefer UMTS, fallback to GPRS
 
     // cleanup tmp files
     cleanupTempFiles();
@@ -421,37 +388,18 @@ bool Sodaq_3Gbee::init(Stream& stream, const char* simPin, const char* apn, cons
         return false;
     }
 
-    return true;
-}
-
-bool Sodaq_3Gbee::join(const char* apn, const char* username, const char* password, AuthorizationTypes authorization)
-{
-    // TODO check GPRS attach (AT+CGATT=1 should be OK)
+    // TODO check GPRS attach? (AT+CGATT=1 should be OK)
     
     // check if connected and disconnect
     if (isConnected()) {
         if (!disconnect()) {
-            debugPrintLn("[ERROR] Modem seems to be already connect and failed to disconnect!");
+            debugPrintLn("[ERROR] Modem seems to be already connected and failed to disconnect!");
             return false;
         }
     }
 
-    if (*apn) {
-        if (!setAPN(apn)) {
-            return false;
-        }
-    }
-
-    if (*username) {
-        if (!setAPNUsername(username)) {
-            return false;
-        }
-    }
-
-    if (*password) {
-        if (!setAPNPassword(password)) {
-            return false;
-        }
+    if (!setAPN(apn, username, password)) {
+        return false;
     }
 
     // DHCP
@@ -1370,7 +1318,7 @@ bool Sodaq_3Gbee::openFtpConnection(const char* server, const char* username, co
 
     // set passive / active
     write("AT+UFTP=6,");
-    writeLn(static_cast<uint8_t>(ftpMode == ACTIVE ? 0 : 1));
+    writeLn(static_cast<uint8_t>(ftpMode == ActiveMode ? 0 : 1));
 
     if (readResponse() != ResponseOK) {
         return false;
@@ -1606,6 +1554,7 @@ void Sodaq_3GbeeOnOff::on()
     if (_vcc33Pin >= 0) {
         digitalWrite(_vcc33Pin, HIGH);
     }
+
     // Wait a little
     // TODO Figure out if this is really needed
     delay(2);
@@ -1619,10 +1568,12 @@ void Sodaq_3GbeeOnOff::off()
     if (_vcc33Pin >= 0) {
         digitalWrite(_vcc33Pin, LOW);
     }
+
     // The GPRSbee is switched off immediately
     if (_onoffPin >= 0) {
         digitalWrite(_onoffPin, LOW);
     }
+
     // Should be instant
     // Let's wait a little, but not too long
     delay(50);

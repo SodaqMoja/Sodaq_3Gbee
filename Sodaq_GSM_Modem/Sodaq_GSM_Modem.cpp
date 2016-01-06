@@ -31,29 +31,34 @@ bool Sodaq_GSM_Modem::on()
         }
     }
 
-    // Make sure it responds
-    if (!isAlive()) {
-        // Oh, no answer, maybe it's off
-        // Fall through and rely on the status pin
-    } else {
-        // It's alive, it answered with an OK
+    // wait for power up
+    bool timeout = true;
+    for (uint8_t i = 0; i < 10; i++) {
+        if (isAlive()) {
+            timeout = false;
+            break;
+        }
     }
 
-    return isOn();
+    if (timeout) {
+        debugPrintLn("Error: No Reply from Modem");
+        return false;
+    }
+
+    return isOn(); // this essentially means isOn() && isAlive()
 }
 
-bool Sodaq_GSM_Modem::off()
+bool Sodaq_GSM_Modem::off() const
 {
     // No matter if it is on or off, turn it off.
     if (_onoff) {
         _onoff->off();
     }
 
-    // TODO _echoOff = false;
     return !isOn();
 }
 
-bool Sodaq_GSM_Modem::isOn()
+bool Sodaq_GSM_Modem::isOn() const
 {
     if (_onoff) {
         return _onoff->isOn();
@@ -63,7 +68,6 @@ bool Sodaq_GSM_Modem::isOn()
     return true;
 }
 
-// TODO is the result really needed?
 size_t Sodaq_GSM_Modem::write(const char* buffer)
 {
     debugPrint("[write]");

@@ -73,8 +73,8 @@ enum HttpRequestTypes {
 };
 
 enum FtpModes {
-    ACTIVE = 0,
-    PASSIVE,
+    ActiveMode = 0,
+    PassiveMode,
 };
 
 enum ResponseTypes {
@@ -105,6 +105,7 @@ typedef uint32_t IP_t;
 #define SOCKET_FAIL -1
 
 class Sodaq_3GbeeOnOff;
+
 class Sodaq_GSM_Modem {
 protected:
     // The stream that communicates with the device.
@@ -124,7 +125,7 @@ protected:
 
     uint32_t _timeout;
 
-    Sodaq_OnOffBee * _onoff;
+    Sodaq_OnOffBee* _onoff;
 
     BaudRateChangeCallbackPtr _baudRateChangeCallbackPtr;
 
@@ -139,7 +140,7 @@ protected:
 
     size_t readBytes(char * buffer, size_t length);
     
-    bool isOn();
+    bool isOn() const;
 
     // Reads a line from the device stream into the "buffer" starting at the "start" position of the buffer.
     // Returns the number of bytes read.
@@ -167,8 +168,7 @@ public:
 
     void setOnOff(Sodaq_OnOffBee & onoff) { _onoff = &onoff; }
     bool on();
-    bool off();
-
+    bool off() const;
 
     // Sets the optional "Diagnostics and Debug" stream.
     void setDiag(Stream& stream) { this->_diagStream = &stream; };
@@ -179,18 +179,15 @@ public:
 
     virtual bool isAlive() = 0;
 
-    virtual bool init(Stream& stream, const char* simPin = NULL, const char* apn = NULL, const char* username = NULL,
-                      const char* password = NULL, AuthorizationTypes authorization = AutoDetectAutorization) = 0;
+    virtual void init(Stream& stream, int8_t vcc33Pin, int8_t onoffPin, int8_t statusPin) = 0;
 
     virtual uint32_t getDefaultBaudrate() = 0;
     void enableBaudrateChange(BaudRateChangeCallbackPtr callback) { _baudRateChangeCallbackPtr = callback; };
 
-    virtual bool setAPN(const char* apn) = 0;
-    virtual bool setAPNUsername(const char* username) = 0;
-    virtual bool setAPNPassword(const char* password) = 0;
+    virtual bool setAPN(const char* apn, const char* username, const char* password) = 0;
 
-    virtual bool join(const char* apn = NULL, const char* username = NULL,
-                      const char* password = NULL, AuthorizationTypes authorization = AutoDetectAutorization) = 0;
+    virtual bool join(const char* simPin, const char* apn, const char* username,
+                      const char* password, AuthorizationTypes authorization = AutoDetectAutorization) = 0;
 
     virtual bool disconnect() = 0;
 

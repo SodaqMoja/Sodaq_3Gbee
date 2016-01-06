@@ -24,15 +24,12 @@ typedef ResponseTypes(*CallbackMethodPtr)(ResponseTypes& response, const char* b
 class Sodaq_3Gbee: public Sodaq_GSM_Modem {
 public:
     bool isAlive();
-    bool setAPN(const char* apn);
-    bool setAPNUsername(const char* username);
-    bool setAPNPassword(const char* password);
+    bool setAPN(const char* apn, const char* username, const char* password);
 
     uint32_t getDefaultBaudrate() { return 9600; };
 
-    bool init(Stream& stream, const char* simPin = NULL, const char* apn = NULL, const char* username = NULL, 
-        const char* password = NULL, AuthorizationTypes authorization = AutoDetectAutorization);
-    bool join(const char* apn = NULL, const char* username = NULL, const char* password = NULL, 
+    void init(Stream& stream, int8_t vcc33Pin, int8_t onoffPin, int8_t statusPin);
+    bool join(const char* simPin, const char* apn, const char* username, const char* password,
         AuthorizationTypes authorization = AutoDetectAutorization);
     bool disconnect();
 
