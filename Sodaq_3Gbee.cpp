@@ -42,6 +42,7 @@
 #define MAX_SOCKET_BUFFER 512
 #define DEFAULT_HTTP_SEND_TMP_FILENAME "http_tmp_put_0"
 #define DEFAULT_HTTP_RECEIVE_TMP_FILENAME "http_last_response_0"
+#define DEFAULT_FTP_TMP_FILENAME "ftp_tmp_file"
 
 Sodaq_3Gbee sodaq_3gbee;
 
@@ -108,6 +109,15 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size, CallbackMetho
                     }
                 }
             }
+            else if (sscanf(buffer, "+UUFTPCR: %d, %d", &param1, &param2) == 2) {
+                debugPrint("FTP Result for command ");
+                debugPrint(param1);
+                debugPrint(": ");
+                debugPrintLn(param2);
+
+                ftpCommandURC[0] = static_cast<uint8_t>(param1);
+                ftpCommandURC[1] = static_cast<uint8_t>(param2);
+            }
 
             if (startsWith(STR_AT, buffer)) {
                 continue; // skip echoed back command
@@ -170,6 +180,56 @@ bool Sodaq_3Gbee::isConnected()
     }
 
     return false;
+}
+
+bool Sodaq_3Gbee::waitForFtpCommandResult(uint8_t ftpCommandIndex)
+{
+    uint32_t start = millis();
+
+    ftpCommandURC[0] = 0xFF; // set to unused value to clear (0 is used)
+    ftpCommandURC[1] = 0;
+    while (ftpCommandURC[0] != ftpCommandIndex && !TIMEOUT(start, 10000)) {
+        isAlive();
+        delay(5);
+    }
+
+    return (ftpCommandURC[0] == ftpCommandIndex) && (ftpCommandURC[1] == 1);
+}
+
+bool Sodaq_3Gbee::changeFtpDirectory(const char* directory)
+{
+    write("AT+UFTPC=8,\"");
+    write(directory);
+    writeLn("\"");
+
+    if ((readResponse() != ResponseOK) || (!waitForFtpCommandResult(8))) {
+        return false;
+    }
+
+    if (strcmp("..", directory)) {
+        ftpDirectoryChangeCounter--;
+    }
+    else {
+        ftpDirectoryChangeCounter++;
+    }
+
+    return true;
+}
+
+void Sodaq_3Gbee::resetFtpDirectoryIfNeeded()
+{
+    uint8_t maxTries = 2 * ftpDirectoryChangeCounter;
+    while (ftpDirectoryChangeCounter > 0 && maxTries > 0) {
+        changeFtpDirectory("..");
+        maxTries--;
+    }
+}
+
+void Sodaq_3Gbee::cleanupTempFiles()
+{
+    deleteFile(DEFAULT_FTP_TMP_FILENAME);
+    deleteFile(DEFAULT_HTTP_RECEIVE_TMP_FILENAME);
+    deleteFile(DEFAULT_HTTP_SEND_TMP_FILENAME);
 }
 
 bool Sodaq_3Gbee::isAlive()
@@ -325,6 +385,9 @@ bool Sodaq_3Gbee::init(Stream& stream, const char* simPin, const char* apn, cons
 
     // TODO check AT+URAT? to be 1,2 meaning prefer umts, fallback to gprs
     // TODO keep checking network registration until done
+
+    // cleanup tmp files
+    cleanupTempFiles();
 
     return true;
 }
@@ -1243,6 +1306,8 @@ bool Sodaq_3Gbee::deleteFile(const char* filename)
 
 bool Sodaq_3Gbee::openFtpConnection(const char* server, const char* username, const char* password, FtpModes ftpMode)
 {
+    ftpDirectoryChangeCounter = 0;
+
     // set server
     write("AT+UFTP=");
     write(isValidIPv4(server) ? "0,\"" : "1,\"");
@@ -1272,11 +1337,17 @@ bool Sodaq_3Gbee::openFtpConnection(const char* server, const char* username, co
     }
 
     // set passive / active
-    write("AT+UFTP=6,\"");
-    write(static_cast<uint8_t>(ftpMode == ACTIVE ? 0 : 1));
-    writeLn("\"");
+    write("AT+UFTP=6,");
+    writeLn(static_cast<uint8_t>(ftpMode == ACTIVE ? 0 : 1));
 
     if (readResponse() != ResponseOK) {
+        return false;
+    }
+
+    // connect
+    writeLn("AT+UFTPC=1");
+
+    if ((readResponse() != ResponseOK) || (!waitForFtpCommandResult(1))) {
         return false;
     }
 
@@ -1285,32 +1356,93 @@ bool Sodaq_3Gbee::openFtpConnection(const char* server, const char* username, co
 
 bool Sodaq_3Gbee::closeFtpConnection()
 {
-    return false;
-    // TODO: implement
+    ftpDirectoryChangeCounter = 0;
+
+    writeLn("AT+UFTPC=0");
+
+    if ((readResponse() != ResponseOK) || (!waitForFtpCommandResult(0))) {
+        return false;
+    }
+
+    return true;
 }
 
+// limit filename[256], path[512]
 bool Sodaq_3Gbee::openFtpFile(const char* filename, const char* path)
 {
-    return false;
-    // TODO: implement
+    // keep the filename for subsequent calls to send or receive data
+    strncpy(ftpFilename, filename, sizeof(ftpFilename)-1);
+    ftpFilename[sizeof(ftpFilename) - 1] = 0; // always null terminated, even when given filename has length > sizeof(ftpFilename)-1
+
+    resetFtpDirectoryIfNeeded();
+    if (path) {
+        char pathBuffer[512 + 1];
+        strncpy(pathBuffer, path, sizeof(pathBuffer)-1);
+        pathBuffer[sizeof(pathBuffer) - 1] = '\0'; // secure from overflow
+
+        char* pathPointer = strtok(pathBuffer, "/");
+        while (pathPointer != NULL)
+        {
+            if (!changeFtpDirectory(pathPointer)) {
+                // TODO do something here?
+            }
+            pathPointer = strtok(NULL, "/");
+        }
+    }
+
+    return true;
 }
 
 bool Sodaq_3Gbee::ftpSend(const char* buffer, size_t size)
 {
-    return false;
-    // TODO: implement
+    // quick sanity check
+    if (ftpFilename[0] == '\0') {
+        return false;
+    }
+
+    deleteFile(DEFAULT_FTP_TMP_FILENAME); // cleanup
+
+    if (!writeFile(DEFAULT_FTP_TMP_FILENAME, buffer, size)) {
+        deleteFile(DEFAULT_FTP_TMP_FILENAME);
+        return false;
+    }
+
+    write("AT+UFTPC=5,\"" DEFAULT_FTP_TMP_FILENAME "\",\"");
+    write(ftpFilename);
+    writeLn("\"");
+
+    if ((readResponse() != ResponseOK) || (!waitForFtpCommandResult(5))) {
+        return false;
+    }
+
+    return true;
 }
 
 int Sodaq_3Gbee::ftpReceive(char* buffer, size_t size)
 {
-    return 0;
-    // TODO: implement
+    // quick sanity check
+    if (ftpFilename[0] == '\0') {
+        return 0;
+    }
+
+    deleteFile(DEFAULT_FTP_TMP_FILENAME); // cleanup
+
+    write("AT+UFTPC=4,\"");
+    write(ftpFilename);
+    writeLn("\",\"" DEFAULT_FTP_TMP_FILENAME "\"");
+
+    if ((readResponse() != ResponseOK) || (!waitForFtpCommandResult(4))) {
+        return 0;
+    }
+
+    return readFile(DEFAULT_FTP_TMP_FILENAME, buffer, size);
 }
 
 bool Sodaq_3Gbee::closeFtpFile()
 {
-    return false;
-    // TODO: implement
+    resetFtpDirectoryIfNeeded();
+    ftpFilename[0] = '\0'; // invalidate the filename
+    return true;
 }
 
 int Sodaq_3Gbee::getSmsList(const char* statusFilter, int* indexList, size_t size)

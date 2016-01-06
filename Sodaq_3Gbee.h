@@ -107,12 +107,22 @@ private:
     uint16_t _socketPendingBytes[7]; // TODO add getter
     tribool_t _httpRequestSuccessBit[HttpRequestTypesMAX];
     bool _socketClosedBit[7];
+    uint8_t ftpCommandURC[2];
+    char ftpFilename[256 + 1]; // always null terminated
+    uint8_t ftpDirectoryChangeCounter; // counts how many nested directories were changed, to revert on close
 
     static bool startsWith(const char* pre, const char* str);
     static size_t ipToString(IP_t ip, char* buffer, size_t size);
     static bool isValidIPv4(const char* str);
     bool setSimPin(const char* simPin);
     bool isConnected(); // TODO move/refactor into Sodaq_GSM_Modem
+
+    // returns true if URC returns 1, false in case URC returns 0 or in case of timeout
+    bool waitForFtpCommandResult(uint8_t ftpCommandIndex);
+    bool changeFtpDirectory(const char* directory);
+    void resetFtpDirectoryIfNeeded();
+
+    void cleanupTempFiles();
     
     static ResponseTypes _cpinParser(ResponseTypes& response, const char* buffer, size_t size, SimStatuses* simStatusResult, uint8_t* dummy);
     static ResponseTypes _udnsrnParser(ResponseTypes& response, const char* buffer, size_t size, IP_t* ipResult, uint8_t* dummy);
