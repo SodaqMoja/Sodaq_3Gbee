@@ -33,6 +33,8 @@ public:
         AuthorizationTypes authorization = AutoDetectAutorization);
     bool disconnect();
 
+    bool isConnected();
+
     NetworkRegistrationStatuses getNetworkStatus();
     NetworkTechnologies getNetworkTechnology();
 
@@ -112,7 +114,6 @@ private:
     static size_t ipToString(IP_t ip, char* buffer, size_t size);
     static bool isValidIPv4(const char* str);
     bool setSimPin(const char* simPin);
-    bool isConnected(); // TODO move/refactor into Sodaq_GSM_Modem
 
     // returns true if URC returns 1, false in case URC returns 0 or in case of timeout
     bool waitForFtpCommandResult(uint8_t ftpCommandIndex);

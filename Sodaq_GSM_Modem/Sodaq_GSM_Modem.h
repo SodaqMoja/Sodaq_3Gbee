@@ -191,6 +191,8 @@ public:
 
     virtual bool disconnect() = 0;
 
+    virtual bool isConnected() = 0;
+
     virtual NetworkRegistrationStatuses getNetworkStatus() = 0;
 
     virtual NetworkTechnologies getNetworkTechnology() = 0;
