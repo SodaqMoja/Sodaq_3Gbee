@@ -11,6 +11,7 @@
 #define debugPrint(...)
 #endif
 
+// Constructor
 Sodaq_GSM_Modem::Sodaq_GSM_Modem() :
     _modemStream(0),
     _diagStream(0),
@@ -23,6 +24,7 @@ Sodaq_GSM_Modem::Sodaq_GSM_Modem() :
     this->_isBufferInitialized = false;
 }
 
+// Turns the modem on and returns true if successful.
 bool Sodaq_GSM_Modem::on()
 {
     if (!isOn()) {
@@ -48,6 +50,7 @@ bool Sodaq_GSM_Modem::on()
     return isOn(); // this essentially means isOn() && isAlive()
 }
 
+// Turns the modem off and returns true if successful.
 bool Sodaq_GSM_Modem::off() const
 {
     // No matter if it is on or off, turn it off.
@@ -58,6 +61,7 @@ bool Sodaq_GSM_Modem::off() const
     return !isOn();
 }
 
+// Returns true if the modem is on.
 bool Sodaq_GSM_Modem::isOn() const
 {
     if (_onoff) {
@@ -100,7 +104,6 @@ size_t Sodaq_GSM_Modem::write(char value)
     return _modemStream->print(value);
 };
 
-// TODO is the result really needed?
 size_t Sodaq_GSM_Modem::writeLn(const char* buffer)
 {
     size_t i = write(buffer);
@@ -125,6 +128,8 @@ size_t Sodaq_GSM_Modem::writeLn(char value)
     return i + write(SODAQ_GSM_TERMINATOR);
 }
 
+// Initializes the input buffer and makes sure it is only initialized once. 
+// Safe to call multiple times.
 void Sodaq_GSM_Modem::initBuffer()
 {
     debugPrintLn("[initBuffer]");
@@ -137,11 +142,13 @@ void Sodaq_GSM_Modem::initBuffer()
     }
 }
 
+// Sets the modem stream.
 void Sodaq_GSM_Modem::setModemStream(Stream& stream)
 {
     this->_modemStream = &stream;
 }
 
+// Returns a character from the modem stream if read within _timeout ms or -1 otherwise.
 int Sodaq_GSM_Modem::timedRead() const
 {
     int c;
@@ -157,32 +164,43 @@ int Sodaq_GSM_Modem::timedRead() const
     return -1; // -1 indicates timeout
 }
 
-size_t Sodaq_GSM_Modem::readBytesUntil(char terminator, char *buffer, size_t length)
+// Fills the given "buffer" with characters read from the modem stream up to "length"
+// maximum characters and until the "terminator" character is found or a character read
+// times out (whichever happens first).
+// The buffer does not contain the "terminator" character or a null terminator explicitly.
+// Returns the number of characters written to the buffer, not including null terminator.
+size_t Sodaq_GSM_Modem::readBytesUntil(char terminator, char* buffer, size_t length)
 {
     if (length < 1) {
         return 0;
     }
 
     size_t index = 0;
+
     while (index < length) {
         int c = timedRead();
+
         if (c < 0 || c == terminator) {
             break;
         }
+
         *buffer++ = static_cast<char>(c);
         index++;
     }
 
-    // TODO distinguise timeout from empty string?
-    // TODO return error for overflow?
     return index; // return number of characters, not including null terminator
 }
 
-size_t Sodaq_GSM_Modem::readBytes(char *buffer, size_t length)
+// Fills the given "buffer" with up to "length" characters read from the modem stream.
+// It stops when a character read timesout or "length" characters have been read.
+// Returns the number of characters written to the buffer.
+size_t Sodaq_GSM_Modem::readBytes(char* buffer, size_t length)
 {
     size_t count = 0;
+
     while (count < length) {
         int c = timedRead();
+
         if (c < 0) {
             break;
         }
@@ -191,14 +209,12 @@ size_t Sodaq_GSM_Modem::readBytes(char *buffer, size_t length)
         count++;
     }
 
-    // TODO distinguise timeout from empty string?
-    // TODO return error for overflow?
     return count;
 }
 
-// Reads a line from the device stream into the "buffer" and returns it starting at the "start" position of the buffer received, without the terminator.
-// Returns the number of bytes read.
-// terminates string
+// Reads a line (up to the SODAQ_GSM_TERMINATOR) from the modem stream into the "buffer".
+// The buffer is terminated with null.
+// Returns the number of bytes read, not including the null terminator.
 size_t Sodaq_GSM_Modem::readLn(char* buffer, size_t size, long timeout)
 {
     _timeout = timeout;

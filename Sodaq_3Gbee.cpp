@@ -190,6 +190,7 @@ bool Sodaq_3Gbee::setSimPin(const char* simPin)
     return (readResponse() == ResponseOK);
 }
 
+// Returns true if the modem is connected to the network and has an activated data connection.
 bool Sodaq_3Gbee::isConnected()
 {
     uint8_t value = 0;
@@ -252,6 +253,7 @@ void Sodaq_3Gbee::cleanupTempFiles()
     deleteFile(DEFAULT_HTTP_SEND_TMP_FILENAME);
 }
 
+// Returns true if the modem replies to "AT" commands without timing out.
 bool Sodaq_3Gbee::isAlive()
 {
     writeLn(STR_AT);
@@ -259,6 +261,7 @@ bool Sodaq_3Gbee::isAlive()
     return (readResponse() == ResponseOK);
 }
 
+// Sets the apn, apn username and apn password to the modem.
 bool Sodaq_3Gbee::setAPN(const char* apn, const char* username, const char* password)
 {
     write("AT+UPSD=" DEFAULT_PROFILE ",1,\"");
@@ -288,6 +291,7 @@ bool Sodaq_3Gbee::setAPN(const char* apn, const char* username, const char* pass
     return true;
 }
 
+// Initializes the modem instance. Sets the modem stream and the on-off power pins.
 void Sodaq_3Gbee::init(Stream& stream, int8_t vcc33Pin, int8_t onoffPin, int8_t statusPin)
 {
     debugPrintLn("[init] started.");
@@ -300,7 +304,7 @@ void Sodaq_3Gbee::init(Stream& stream, int8_t vcc33Pin, int8_t onoffPin, int8_t 
     _onoff = &sodaq_3gbee_onoff;
 }
 
-// also turns on the modem
+// Turns on and initializes the modem, then connects to the network and activates the data connection.
 bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* username, const char* password, AuthorizationTypes authorization)
 {
     if (!on()) {
@@ -431,6 +435,7 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
     return false;
 }
 
+// Disconnects the modem from the network.
 bool Sodaq_3Gbee::disconnect()
 {
     // TODO also turn off the modem?
@@ -452,6 +457,7 @@ ResponseTypes Sodaq_3Gbee::_cregParser(ResponseTypes& response, const char* buff
     return ResponseError;
 }
 
+// Returns the current status of the network.
 NetworkRegistrationStatuses Sodaq_3Gbee::getNetworkStatus()
 {
     writeLn("AT+CREG?"); // TODO ? +CGREG
@@ -471,6 +477,7 @@ NetworkRegistrationStatuses Sodaq_3Gbee::getNetworkStatus()
     return UnknownNetworkRegistrationStatus;
 }
 
+// Returns the network technology the modem is currently registered to.
 NetworkTechnologies Sodaq_3Gbee::getNetworkTechnology()
 {
     writeLn("AT+COPS?");
@@ -505,7 +512,8 @@ ResponseTypes Sodaq_3Gbee::_csqParser(ResponseTypes& response, const char* buffe
     return ResponseError;
 }
 
-// rssi in dBm
+// Gets the Received Signal Strength Indication in dBm and Bit Error Rate.
+// Returns true if successful.
 bool Sodaq_3Gbee::getRSSIAndBER(int8_t* rssi, uint8_t* ber)
 {
     static char berValues[] = { 49, 43, 37, 25, 19, 13, 7, 0 }; // 3GPP TS 45.008 [20] subclause 8.2.4
@@ -552,6 +560,8 @@ ResponseTypes Sodaq_3Gbee::_copsParser(ResponseTypes& response, const char* buff
     return ResponseError;
 }
 
+// Gets the Operator Name.
+// Returns true if successful.
 bool Sodaq_3Gbee::getOperatorName(char* buffer, size_t size)
 {
     if (size > 0) {
@@ -579,6 +589,8 @@ ResponseTypes Sodaq_3Gbee::_cnumParser(ResponseTypes& response, const char* buff
 
 }
 
+// Gets Mobile Directory Number.
+// Returns true if successful.
 bool Sodaq_3Gbee::getMobileDirectoryNumber(char* buffer, size_t size)
 {
     if (size < 7 + 1) {
@@ -611,7 +623,9 @@ ResponseTypes Sodaq_3Gbee::_nakedStringParser(ResponseTypes& response, const cha
     return ResponseError;
 }
 
-// needs at least 16 bytes buffer
+// Gets International Mobile Equipment Identity.
+// Should be provided with a buffer of at least 16 bytes.
+// Returns true if successful.
 bool Sodaq_3Gbee::getIMEI(char* buffer, size_t size)
 {
     if (size < 15 + 1) {
@@ -641,7 +655,9 @@ ResponseTypes Sodaq_3Gbee::_ccidParser(ResponseTypes& response, const char* buff
     return ResponseError;
 }
 
-// needs at least 21 bytes buffer
+// Gets Integrated Circuit Card ID.
+// Should be provided with a buffer of at least 21 bytes.
+// Returns true if successful.
 bool Sodaq_3Gbee::getCCID(char* buffer, size_t size)
 {
     if (size < 20 + 1) {
@@ -657,7 +673,9 @@ bool Sodaq_3Gbee::getCCID(char* buffer, size_t size)
     return (readResponse<char, size_t>(_ccidParser, buffer, &size) == ResponseOK);
 }
 
-// needs at least 16 bytes buffer
+// Gets the International Mobile Station Identity.
+// Should be provided with a buffer of at least 16 bytes.
+// Returns true if successful.
 bool Sodaq_3Gbee::getIMSI(char* buffer, size_t size)
 {
     if (size < 15 + 1) {
@@ -694,6 +712,7 @@ ResponseTypes Sodaq_3Gbee::_cpinParser(ResponseTypes& response, const char* buff
     return ResponseError;
 }
 
+// Returns the current SIM status.
 SimStatuses Sodaq_3Gbee::getSimStatus()
 {
     SimStatuses simStatus;
@@ -706,6 +725,7 @@ SimStatuses Sodaq_3Gbee::getSimStatus()
     return SimMissing;
 }
 
+// Returns the local IP Address.
 IP_t Sodaq_3Gbee::getLocalIP()
 {
     IP_t ip = NO_IP_ADDRESS;
@@ -786,6 +806,7 @@ ResponseTypes Sodaq_3Gbee::_usocrParser(ResponseTypes& response, const char* buf
     return ResponseError;
 }
 
+// Returns the IP of the given host (nslookup).
 IP_t Sodaq_3Gbee::getHostIP(const char* host)
 {
     IP_t ip = NO_IP_ADDRESS;
@@ -800,6 +821,8 @@ IP_t Sodaq_3Gbee::getHostIP(const char* host)
     return NO_IP_ADDRESS;
 }
 
+// Creates a new socket for the given protocol, optionally bound to the given localPort.
+// Returns the index of the socket created or -1 in case of error.
 int Sodaq_3Gbee::createSocket(Protocols protocol, uint16_t localPort)
 {
     uint8_t protocolIndex;
@@ -895,6 +918,8 @@ bool Sodaq_3Gbee::isValidIPv4(const char* str)
     return true;
 }
 
+// Requests a connection to the given host and port, on the given socket.
+// Returns true if successful.
 bool Sodaq_3Gbee::connectSocket(uint8_t socket, const char* host, uint16_t port)
 {
     bool usePassedHost;
@@ -921,6 +946,8 @@ bool Sodaq_3Gbee::connectSocket(uint8_t socket, const char* host, uint16_t port)
     return (readResponse(NULL, 30000) == ResponseOK);
 }
 
+// Sends the given buffer through the given socket.
+// Returns true if successful.
 bool Sodaq_3Gbee::socketSend(uint8_t socket, const char* buffer, size_t size)
 {
     // TODO see if we should keep an array of sockets so that the UDP-specific 
@@ -965,7 +992,9 @@ ResponseTypes Sodaq_3Gbee::_usordParser(ResponseTypes& response, const char* buf
     return ResponseError;
 }
 
-// does not terminate string
+// Reads data from the given socket into the given buffer.
+// Does not append a null terminator.
+// Returns the number of bytes written to the buffer.
 size_t Sodaq_3Gbee::socketReceive(uint8_t socket, char* buffer, size_t size)
 {
     if (socket >= ARRAY_SIZE(_socketPendingBytes)) {
@@ -1006,6 +1035,8 @@ size_t Sodaq_3Gbee::socketReceive(uint8_t socket, char* buffer, size_t size)
     return 0;
 }
 
+// Closes the given socket.
+// Returns true if successful.
 bool Sodaq_3Gbee::closeSocket(uint8_t socket)
 {
     write("AT+USOCL=");
@@ -1026,10 +1057,13 @@ void Sodaq_3Gbee::waitForSocketToCloseByRemote(uint8_t socket)
     };
 }
 
-// TODO maybe return error <0 ?
-// endpoint with initial "/"
+// Creates an HTTP request using the (optional) given buffer and 
+// (optionally) returns the received data.
+// endpoint should include the initial "/".
 size_t Sodaq_3Gbee::httpRequest(const char* url, uint16_t port, const char* endpoint, HttpRequestTypes requestType, char* responseBuffer, size_t responseSize, const char* sendBuffer, size_t sendSize)
 {
+    // TODO maybe return error <0 ?
+
     // reset http profile 0
     writeLn("AT+UHTTP=0");
     if (readResponse() != ResponseOK) {
@@ -1286,6 +1320,7 @@ bool Sodaq_3Gbee::deleteFile(const char* filename)
     return (readResponse() == ResponseOK);
 }
 
+// Opens an FTP connection.
 bool Sodaq_3Gbee::openFtpConnection(const char* server, const char* username, const char* password, FtpModes ftpMode)
 {
     ftpDirectoryChangeCounter = 0;
@@ -1336,6 +1371,7 @@ bool Sodaq_3Gbee::openFtpConnection(const char* server, const char* username, co
     return true;
 }
 
+// Closes the FTP connection.
 bool Sodaq_3Gbee::closeFtpConnection()
 {
     ftpDirectoryChangeCounter = 0;
@@ -1349,7 +1385,9 @@ bool Sodaq_3Gbee::closeFtpConnection()
     return true;
 }
 
-// limit filename[256], path[512]
+// Opens an FTP file for sending or receiving.
+// filename should be limited to 256 characters (excl. null terminator)
+// path should be limited to 512 characters (excl. null temrinator)
 bool Sodaq_3Gbee::openFtpFile(const char* filename, const char* path)
 {
     // keep the filename for subsequent calls to send or receive data
@@ -1375,6 +1413,9 @@ bool Sodaq_3Gbee::openFtpFile(const char* filename, const char* path)
     return true;
 }
 
+// Sends the given "buffer" to the (already) open FTP file.
+// Returns true if successful.
+// Fails immediatelly if there is no open FTP file.
 bool Sodaq_3Gbee::ftpSend(const char* buffer, size_t size)
 {
     // quick sanity check
@@ -1400,6 +1441,9 @@ bool Sodaq_3Gbee::ftpSend(const char* buffer, size_t size)
     return true;
 }
 
+// Fills the given "buffer" from the (already) open FTP file.
+// Returns true if successful.
+// Fails immediatelly if there is no open FTP file.
 int Sodaq_3Gbee::ftpReceive(char* buffer, size_t size)
 {
     // quick sanity check
@@ -1420,6 +1464,9 @@ int Sodaq_3Gbee::ftpReceive(char* buffer, size_t size)
     return readFile(DEFAULT_FTP_TMP_FILENAME, buffer, size);
 }
 
+// Closes the open FTP file.
+// Returns true if successful.
+// Fails immediatelly if there is no open FTP file.
 bool Sodaq_3Gbee::closeFtpFile()
 {
     resetFtpDirectoryIfNeeded();
@@ -1445,6 +1492,8 @@ ResponseTypes Sodaq_3Gbee::_cmglParser(ResponseTypes& response, const char* buff
 }
 
 // TODO test
+// Gets an SMS list according to the given filter and puts the indexes in the "indexList".
+// Returns the number of indexes written to the list or -1 in case of error.
 int Sodaq_3Gbee::getSmsList(const char* statusFilter, int* indexList, size_t size)
 {
     write("AT+CMGL=\"");
@@ -1479,6 +1528,8 @@ ResponseTypes Sodaq_3Gbee::_cmgrParser(ResponseTypes& response, const char* buff
 }
 
 // TODO test
+// Reads an SMS from the given index and writes it to the given buffer.
+// Returns true if successful.
 bool Sodaq_3Gbee::readSms(uint8_t index, char* phoneNumber, char* buffer, size_t size)
 {
     write("AT+CMGR=");
@@ -1488,6 +1539,7 @@ bool Sodaq_3Gbee::readSms(uint8_t index, char* phoneNumber, char* buffer, size_t
 }
 
 // TODO test
+// Deletes the SMS at the given index.
 bool Sodaq_3Gbee::deleteSms(uint8_t index)
 {
     write("AT+CMGD=");
@@ -1497,6 +1549,9 @@ bool Sodaq_3Gbee::deleteSms(uint8_t index)
 }
 
 // TODO test
+// Sends a text-mode SMS.
+// Expects a null-terminated buffer.
+// Returns true if successful.
 bool Sodaq_3Gbee::sendSms(const char* phoneNumber, const char* buffer)
 {
     write("AT+CMGS=\"");
@@ -1524,10 +1579,7 @@ Sodaq_3GbeeOnOff::Sodaq_3GbeeOnOff()
     _statusPin = -1;
 }
 
-/*!
- * \brief Initialize the instance
- *
- */
+// Initializes the instance
 void Sodaq_3GbeeOnOff::init(int vcc33Pin, int onoffPin, int statusPin)
 {
     if (vcc33Pin >= 0) {
