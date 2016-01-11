@@ -7,9 +7,6 @@
 #include <Stream.h>
 #include "Sodaq_GSM_Modem/Sodaq_GSM_Modem.h"
 
-// TODO this needs to be set in the compiler directives. Find something else to do
-#define SODAQ_GSM_TERMINATOR CRLF
-
 enum TriBoolStates
 {
     TriBoolFalse,

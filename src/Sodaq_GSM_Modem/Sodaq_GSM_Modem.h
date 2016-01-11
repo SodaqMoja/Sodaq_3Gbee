@@ -14,6 +14,9 @@
 
 #define SODAQ_GSM_MODEM_DEFAULT_INPUT_BUFFER_SIZE 128
 
+// TODO this needs to be set in the compiler directives. Find something else to do
+#define SODAQ_GSM_TERMINATOR CRLF
+
 #ifndef SODAQ_GSM_TERMINATOR
 #warning "SODAQ_GSM_TERMINATOR is not set"
 #define SODAQ_GSM_TERMINATOR CRLF
