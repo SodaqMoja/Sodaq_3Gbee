@@ -1,57 +1,60 @@
-#include "Sodaq_3Gbee.h"
+#include <Sodaq_3Gbee.h>
 
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
 
-// MBili
-#define debugSerial Serial
-
-// Autonomo
-// #define debugSerial SerialUSB
+#if defined(ARDUINO_SODAQ_AUTONOMO)
+#define MySerial SerialUSB
+#define MY_BEE_VCC  BEE_VCC
+#elif defined(ARDUINO_SODAQ_MBILI)
+#define MY_BEE_VCC  -1
+#define MySerial Serial
+#error "Please select Autonomo or Mbili"
+#endif
 
 #define modemSerial Serial1
 
 #define APN "public4.m2minternet.com"
-#define USERNAME NULL
-#define PASSWORD NULL
+#define APN_USER NULL
+#define APN_PASS NULL
 
 //#define APN "aerea.m2m.com"
-//#define USERNAME NULL
-//#define PASSWORD NULL
+//#define APN_USER NULL
+//#define APN_PASS NULL
 
 #define TEST_DNS
 #define TEST_SOCKETS
-//#define TEST_NETWORK_INFO
-//#define TEST_SIM_DEVICE_INFO
-//#define TEST_FILESYSTEM
-//#define TEST_HTTP
+#define TEST_NETWORK_INFO
+#define TEST_SIM_DEVICE_INFO
+#define TEST_FILESYSTEM
+#define TEST_HTTP
 //#define TEST_FTP
 //#define TEST_SMS
 
 void printToLen(const char* buffer, size_t len)
 {
     for (size_t i = 0; i < len; i++) {
-        debugSerial.print(buffer[i]);
+        MySerial.print(buffer[i]);
     }
 
-    debugSerial.println();
+    MySerial.println();
 }
 
 void printIpTuple(uint8_t o1, uint8_t o2, uint8_t o3, uint8_t o4)
 {
-    debugSerial.print(o1);
-    debugSerial.print(".");
-    debugSerial.print(o2);
-    debugSerial.print(".");
-    debugSerial.print(o3);
-    debugSerial.print(".");
-    debugSerial.print(o4);
+    MySerial.print(o1);
+    MySerial.print(".");
+    MySerial.print(o2);
+    MySerial.print(".");
+    MySerial.print(o3);
+    MySerial.print(".");
+    MySerial.print(o4);
 }
 
 void changeModemBaudrate(uint32_t newBaudrate)
 {
-    debugSerial.print("Main: changing baudrate to ");
-    debugSerial.println(newBaudrate);
+    MySerial.print("Main: changing baudrate to ");
+    MySerial.println(newBaudrate);
 
     modemSerial.flush();
     modemSerial.end();
@@ -60,56 +63,54 @@ void changeModemBaudrate(uint32_t newBaudrate)
 
 void setup()
 {
-    debugSerial.begin(57600);
+    MySerial.begin(57600);
     modemSerial.begin(sodaq_3gbee.getDefaultBaudrate());
+    delay(3000);
+    MySerial.println("**Bootup**");
 
-    debugSerial.println("**Bootup**");
-
-    sodaq_3gbee.setDiag(debugSerial); // optional
+    sodaq_3gbee.setDiag(MySerial); // optional
     sodaq_3gbee.enableBaudrateChange(changeModemBaudrate); // optional
     
     delay(500);
 
-    // MBili
-    sodaq_3gbee.init(modemSerial, -1, BEEDTR, BEECTS);
-    debugSerial.println("Modem initialization was successful.");
+    sodaq_3gbee.init(modemSerial, MY_BEE_VCC, BEEDTR, BEECTS);
 
-    if (sodaq_3gbee.connect(NULL, APN, USERNAME, PASSWORD)) {
-        debugSerial.println("Modem connected to the apn successfully.");
-        debugSerial.println();
-        debugSerial.print("Local IP: ");
+    if (sodaq_3gbee.connect(NULL, APN, APN_USER, APN_PASS)) {
+        MySerial.println("Modem connected to the apn successfully.");
+        MySerial.println();
+        MySerial.print("Local IP: ");
         IP_t localIp = sodaq_3gbee.getLocalIP();
         printIpTuple(IP_TO_TUPLE(localIp));
-        debugSerial.println();
-        debugSerial.println();
+        MySerial.println();
+        MySerial.println();
 
         delay(1000);
-        debugSerial.println();
+        MySerial.println();
 
 #ifdef TEST_DNS
         {
             IP_t ip;
-            debugSerial.println("nslookup(\"www.google.com\")");
+            MySerial.println("nslookup(\"www.google.com\")");
             ip = sodaq_3gbee.getHostIP("www.google.com");
             printIpTuple(IP_TO_TUPLE(ip));
-            debugSerial.println();
+            MySerial.println();
 
             delay(1000);
-            debugSerial.println();
+            MySerial.println();
 
-            debugSerial.println("nslookup(\"www.sodaq.com\") [== 149.210.181.239]");
+            MySerial.println("nslookup(\"www.sodaq.com\") [== 149.210.181.239]");
             ip = sodaq_3gbee.getHostIP("www.sodaq.com");
             printIpTuple(IP_TO_TUPLE(ip));
-            debugSerial.println();
+            MySerial.println();
 
             delay(1000);
-            debugSerial.println();
+            MySerial.println();
 
             // this should fail and show 0.0.0.0
-            debugSerial.println("nslookup(\"www.odiygsifugvhfdkl.com\") [should fail]");
+            MySerial.println("nslookup(\"www.odiygsifugvhfdkl.com\") [should fail]");
             ip = sodaq_3gbee.getHostIP("www.odiygsifugvhfdkl.com");
             printIpTuple(IP_TO_TUPLE(ip));
-            debugSerial.println();
+            MySerial.println();
         }
 #endif
 
@@ -117,7 +118,7 @@ void setup()
         {
             uint8_t socket = sodaq_3gbee.createSocket(TCP);
             if (sodaq_3gbee.connectSocket(socket, "54.175.103.105", 30000)) {
-                debugSerial.println("socket connected");
+                MySerial.println("socket connected");
 
                 sodaq_3gbee.socketSend(socket, "123456789", 9);
                 for (int i = 0; i < 10; i++) {
@@ -127,17 +128,17 @@ void setup()
                 char receiveBuffer[128];
                 size_t bytesRead = sodaq_3gbee.socketReceive(socket, receiveBuffer, sizeof(receiveBuffer));
 
-                debugSerial.println();
-                debugSerial.println();
-                debugSerial.print("Bytes read: ");
-                debugSerial.println(bytesRead);
+                MySerial.println();
+                MySerial.println();
+                MySerial.print("Bytes read: ");
+                MySerial.println(bytesRead);
 
                 for (size_t i = 0; i < bytesRead; i++)
                 {
-                    debugSerial.print(receiveBuffer[i]);
+                    MySerial.print(receiveBuffer[i]);
                 }
 
-                debugSerial.println();
+                MySerial.println();
             }
         }
 #endif
@@ -146,24 +147,24 @@ void setup()
         {
             char operatorBuffer[16];
             if (sodaq_3gbee.getOperatorName(operatorBuffer, sizeof(operatorBuffer))) {
-                debugSerial.println(operatorBuffer);
+                MySerial.println(operatorBuffer);
             }
 
-            debugSerial.println(sodaq_3gbee.getNetworkTechnology());
-            debugSerial.println(sodaq_3gbee.getNetworkStatus());
+            MySerial.println(sodaq_3gbee.getNetworkTechnology());
+            MySerial.println(sodaq_3gbee.getNetworkStatus());
 
             int8_t rssi;
             uint8_t ber;
             for (uint8_t i = 0; i < 20; i++) {
                 if (sodaq_3gbee.getRSSIAndBER(&rssi, &ber)) {
-                    debugSerial.print("RSSI:");
-                    debugSerial.print(rssi);
-                    debugSerial.print("dBm\t");
-                    debugSerial.print("BER:");
-                    debugSerial.println(ber);
+                    MySerial.print("RSSI:");
+                    MySerial.print(rssi);
+                    MySerial.print("dBm\t");
+                    MySerial.print("BER:");
+                    MySerial.println(ber);
                 }
                 else {
-                    debugSerial.println("something went wrong with getting rssi and ber");
+                    MySerial.println("something went wrong with getting rssi and ber");
                 }
 
                 delay(2000);
@@ -175,26 +176,26 @@ void setup()
         {
             char numberBuffer[16];
             if (sodaq_3gbee.getMobileDirectoryNumber(numberBuffer, sizeof(numberBuffer))) {
-                debugSerial.print("Phone Number: ");
-                debugSerial.println(numberBuffer);
+                MySerial.print("Phone Number: ");
+                MySerial.println(numberBuffer);
             }
 
             char imeiBuffer[16];
             if (sodaq_3gbee.getIMEI(imeiBuffer, sizeof(imeiBuffer))) {
-                debugSerial.print("IMEI: ");
-                debugSerial.println(imeiBuffer);
+                MySerial.print("IMEI: ");
+                MySerial.println(imeiBuffer);
             }
 
             char ccidBuffer[24];
             if (sodaq_3gbee.getCCID(ccidBuffer, sizeof(ccidBuffer))) {
-                debugSerial.print("CCID: ");
-                debugSerial.println(ccidBuffer);
+                MySerial.print("CCID: ");
+                MySerial.println(ccidBuffer);
             }
 
             char imsiBuffer[24];
             if (sodaq_3gbee.getIMSI(imsiBuffer, sizeof(imsiBuffer))) {
-                debugSerial.print("IMSI: ");
-                debugSerial.println(imsiBuffer);
+                MySerial.print("IMSI: ");
+                MySerial.println(imsiBuffer);
             }
         }
 #endif
@@ -206,7 +207,7 @@ void setup()
             sodaq_3gbee.writeFile("test_file", writeBuffer, sizeof(writeBuffer));
 
             size_t count = sodaq_3gbee.readFile("test_file", readBuffer, sizeof(readBuffer));
-            debugSerial.print("count: "); debugSerial.println(count);
+            MySerial.print("count: "); MySerial.println(count);
 
             printToLen(readBuffer, count);
 
@@ -255,7 +256,7 @@ void setup()
             sodaq_3gbee.closeFtpConnection();
 
             if (strcmp(buffer, loremIpsumParagraph) == 0) {
-                debugSerial.println("Success: The file read from the ftp is the same as the one written!");
+                MySerial.println("Success: The file read from the ftp is the same as the one written!");
             }
         }
 #endif
@@ -263,17 +264,17 @@ void setup()
 #ifdef TEST_SMS
         {
             if (sodaq_3gbee.sendSms("0031630191744", "This is a test SMS!")) {
-                debugSerial.println("The SMS was sent successfully!");
+                MySerial.println("The SMS was sent successfully!");
             }
 
             int indexes[128];
             int count = sodaq_3gbee.getSmsList("ALL", indexes, sizeof(indexes));
             if (count < 0) {
-                debugSerial.println("SMS list error!");
+                MySerial.println("SMS list error!");
             } 
             else {
                 for (int i = 0; i < count; i++) {
-                    debugSerial.println(indexes[i]);
+                    MySerial.println(indexes[i]);
                 }
             }
 
@@ -285,23 +286,23 @@ void setup()
 
 //        sodaq_3gbee.off();
 //            if (sodaq_3gbee.disconnect()) {
-//                debugSerial.println("Modem was successfully disconnected.");
+//                MySerial.println("Modem was successfully disconnected.");
 //            }
     }
     else {
-        debugSerial.println("Modem failed to connect to the apn!");
+        MySerial.println("Modem failed to connect to the apn!");
     }
 }
 
 void loop()
 {
-    while (debugSerial.available())
+    while (MySerial.available())
     {
-        modemSerial.write(static_cast<char>(debugSerial.read()));
+        modemSerial.write(static_cast<char>(MySerial.read()));
     }
 
     while (modemSerial.available())
     {
-        debugSerial.write(static_cast<char>(modemSerial.read()));
+        MySerial.write(static_cast<char>(modemSerial.read()));
     }
 }
