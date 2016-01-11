@@ -120,79 +120,6 @@ typedef void(*BaudRateChangeCallbackPtr)(uint32_t newBaudrate);
 class Sodaq_3GbeeOnOff;
 
 class Sodaq_GSM_Modem {
-protected:
-    // The stream that communicates with the device.
-    Stream* _modemStream;
-
-    // The (optional) stream to show debug information.
-    Stream* _diagStream;
-
-    // The size of the input buffer. Equals SODAQ_GSM_MODEM_DEFAULT_INPUT_BUFFER_SIZE
-    // by default or (optionally) a user-defined value when using USE_DYNAMIC_BUFFER.
-    size_t _inputBufferSize;
-
-    // Flag to make sure the buffers are not allocated more than once.
-    bool _isBufferInitialized;
-
-    // The buffer used when reading from the modem. The space is allocated during init() via initBuffer().
-    char* _inputBuffer;
-
-    // The timeout used by the stream helper methods contained in this class (such as timedRead()).
-    uint32_t _timeout;
-
-    // The on-off pin power controller object.
-    Sodaq_OnOffBee* _onoff;
-
-    // The callback for requesting baudrate change of the modem stream.
-    BaudRateChangeCallbackPtr _baudRateChangeCallbackPtr;
-
-    // Initializes the input buffer and makes sure it is only initialized once. 
-    // Safe to call multiple times.
-    void initBuffer();
-
-    // Sets the modem stream.
-    void setModemStream(Stream& stream);
-    
-    // Returns a character from the modem stream if read within _timeout ms or -1 otherwise.
-    int timedRead() const;
-
-    // Fills the given "buffer" with characters read from the modem stream up to "length"
-    // maximum characters and until the "terminator" character is found or a character read
-    // times out (whichever happens first).
-    // The buffer does not contain the "terminator" character or a null terminator explicitly.
-    // Returns the number of characters written to the buffer, not including null terminator.
-    size_t readBytesUntil(char terminator, char* buffer, size_t length);
-
-    // Fills the given "buffer" with up to "length" characters read from the modem stream.
-    // It stops when a character read timesout or "length" characters have been read.
-    // Returns the number of characters written to the buffer.
-    size_t readBytes(char* buffer, size_t length);
-    
-    // Returns true if the modem is on.
-    bool isOn() const;
-
-    // Reads a line (up to but not including the SODAQ_GSM_TERMINATOR) from the modem 
-    // stream into the "buffer". The buffer is terminated with null.
-    // Returns the number of bytes read, not including the null terminator.
-    size_t readLn(char* buffer, size_t size, long timeout = DEFAULT_TIMEOUT);
-
-    // Reads a line from the modem stream into the input buffer.
-    // Returns the number of bytes read.
-    size_t readLn() { return readLn(_inputBuffer, _inputBufferSize); };
-    
-    // Methods to write to the modem stream
-    size_t write(const char* buffer);
-    size_t write(uint8_t value);
-    size_t write(uint32_t value);
-    size_t write(char value);
-
-    // Methods to write to the modem stream with terminator
-    size_t writeLn(const char* buffer);
-    size_t writeLn(uint8_t value);
-    size_t writeLn(uint32_t value);
-    size_t writeLn(char value);
-
-    virtual ResponseTypes readResponse(char* buffer, size_t size, size_t* outSize, uint32_t timeout = DEFAULT_READ_MS) = 0;
 public:
     // Constructor
     Sodaq_GSM_Modem();
@@ -357,6 +284,80 @@ public:
     // Expects a null-terminated buffer.
     // Returns true if successful.
     virtual bool sendSms(const char* phoneNumber, const char* buffer) = 0;
+
+protected:
+    // The stream that communicates with the device.
+    Stream* _modemStream;
+
+    // The (optional) stream to show debug information.
+    Stream* _diagStream;
+
+    // The size of the input buffer. Equals SODAQ_GSM_MODEM_DEFAULT_INPUT_BUFFER_SIZE
+    // by default or (optionally) a user-defined value when using USE_DYNAMIC_BUFFER.
+    size_t _inputBufferSize;
+
+    // Flag to make sure the buffers are not allocated more than once.
+    bool _isBufferInitialized;
+
+    // The buffer used when reading from the modem. The space is allocated during init() via initBuffer().
+    char* _inputBuffer;
+
+    // The timeout used by the stream helper methods contained in this class (such as timedRead()).
+    uint32_t _timeout;
+
+    // The on-off pin power controller object.
+    Sodaq_OnOffBee* _onoff;
+
+    // The callback for requesting baudrate change of the modem stream.
+    BaudRateChangeCallbackPtr _baudRateChangeCallbackPtr;
+
+    // Initializes the input buffer and makes sure it is only initialized once.
+    // Safe to call multiple times.
+    void initBuffer();
+
+    // Sets the modem stream.
+    void setModemStream(Stream& stream);
+
+    // Returns a character from the modem stream if read within _timeout ms or -1 otherwise.
+    int timedRead() const;
+
+    // Fills the given "buffer" with characters read from the modem stream up to "length"
+    // maximum characters and until the "terminator" character is found or a character read
+    // times out (whichever happens first).
+    // The buffer does not contain the "terminator" character or a null terminator explicitly.
+    // Returns the number of characters written to the buffer, not including null terminator.
+    size_t readBytesUntil(char terminator, char* buffer, size_t length);
+
+    // Fills the given "buffer" with up to "length" characters read from the modem stream.
+    // It stops when a character read timesout or "length" characters have been read.
+    // Returns the number of characters written to the buffer.
+    size_t readBytes(char* buffer, size_t length);
+
+    // Returns true if the modem is on.
+    bool isOn() const;
+
+    // Reads a line (up to but not including the SODAQ_GSM_TERMINATOR) from the modem
+    // stream into the "buffer". The buffer is terminated with null.
+    // Returns the number of bytes read, not including the null terminator.
+    size_t readLn(char* buffer, size_t size, long timeout = DEFAULT_TIMEOUT);
+
+    // Reads a line from the modem stream into the input buffer.
+    // Returns the number of bytes read.
+    size_t readLn() { return readLn(_inputBuffer, _inputBufferSize); };
+
+    // Methods to write to the modem stream
+    size_t write(const char* buffer);
+    size_t write(uint8_t value);
+    size_t write(uint32_t value);
+    size_t write(char value);
+
+    // Methods to write to the modem stream with terminator
+    size_t writeLn(const char* buffer);
+    size_t writeLn(uint8_t value);
+    size_t writeLn(uint32_t value);
+    size_t writeLn(char value);
+
+    virtual ResponseTypes readResponse(char* buffer, size_t size, size_t* outSize, uint32_t timeout = DEFAULT_READ_MS) = 0;
 };
 
 
