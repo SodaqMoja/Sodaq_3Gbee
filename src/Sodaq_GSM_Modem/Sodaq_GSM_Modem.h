@@ -6,23 +6,9 @@
 #include <Stream.h>
 #include "Sodaq_OnOffBee.h"
 
-#define CR "\r"
-#define LF "\n"
-#define CRLF "\r\n"
-
 #define DEFAULT_TIMEOUT 1000
 
 #define SODAQ_GSM_MODEM_DEFAULT_INPUT_BUFFER_SIZE 128
-
-// TODO this needs to be set in the compiler directives. Find something else to do
-#define SODAQ_GSM_TERMINATOR CRLF
-
-#ifndef SODAQ_GSM_TERMINATOR
-#warning "SODAQ_GSM_TERMINATOR is not set"
-#define SODAQ_GSM_TERMINATOR CRLF
-#endif
-
-#define SODAQ_GSM_TERMINATOR_LEN (sizeof(SODAQ_GSM_TERMINATOR) - 1) // without the NULL terminator
 
 // TODO handle Watchdog, also use a define to turn handling on/off
 
@@ -314,6 +300,10 @@ protected:
     // The callback for requesting baudrate change of the modem stream.
     BaudRateChangeCallbackPtr _baudRateChangeCallbackPtr;
 
+    // This flag keeps track if the next write is the continuation of the current command
+    // A Carriage Return will reset this flag.
+    bool _appendCommand;
+
     // Initializes the input buffer and makes sure it is only initialized once.
     // Safe to call multiple times.
     void initBuffer();
@@ -359,6 +349,12 @@ protected:
     size_t writeLn(uint8_t value);
     size_t writeLn(uint32_t value);
     size_t writeLn(char value);
+
+    // Write the command terminator
+    size_t writeLn();
+
+    // Write the command prolog (just for debugging
+    void writeProlog();
 
     virtual ResponseTypes readResponse(char* buffer, size_t size, size_t* outSize, uint32_t timeout = DEFAULT_READ_MS) = 0;
 };

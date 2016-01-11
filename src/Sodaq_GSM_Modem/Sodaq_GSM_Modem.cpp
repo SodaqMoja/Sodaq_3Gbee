@@ -11,6 +11,20 @@
 #define debugPrint(...)
 #endif
 
+#define CR "\r"
+#define LF "\n"
+#define CRLF "\r\n"
+
+// TODO this needs to be set in the compiler directives. Find something else to do
+#define SODAQ_GSM_TERMINATOR CRLF
+
+#ifndef SODAQ_GSM_TERMINATOR
+#warning "SODAQ_GSM_TERMINATOR is not set"
+#define SODAQ_GSM_TERMINATOR CRLF
+#endif
+
+#define SODAQ_GSM_TERMINATOR_LEN (sizeof(SODAQ_GSM_TERMINATOR) - 1) // without the NULL terminator
+
 // Constructor
 Sodaq_GSM_Modem::Sodaq_GSM_Modem() :
     _modemStream(0),
@@ -72,9 +86,17 @@ bool Sodaq_GSM_Modem::isOn() const
     return true;
 }
 
+void Sodaq_GSM_Modem::writeProlog()
+{
+    if (!_appendCommand) {
+        debugPrint(">> ");
+        _appendCommand = true;
+    }
+}
+
 size_t Sodaq_GSM_Modem::write(const char* buffer)
 {
-    debugPrint("[write]");
+    writeProlog();
     debugPrint(buffer);
     
     return _modemStream->print(buffer);
@@ -82,7 +104,7 @@ size_t Sodaq_GSM_Modem::write(const char* buffer)
 
 size_t Sodaq_GSM_Modem::write(uint8_t value)
 {
-    debugPrint("[write]");
+    writeProlog();
     debugPrint(value);
 
     return _modemStream->print(value);
@@ -90,7 +112,7 @@ size_t Sodaq_GSM_Modem::write(uint8_t value)
 
 size_t Sodaq_GSM_Modem::write(uint32_t value)
 {
-    debugPrint("[write]");
+    writeProlog();
     debugPrint(value);
 
     return _modemStream->print(value);
@@ -98,7 +120,7 @@ size_t Sodaq_GSM_Modem::write(uint32_t value)
 
 size_t Sodaq_GSM_Modem::write(char value)
 {
-    debugPrint("[write]");
+    writeProlog();
     debugPrint(value);
 
     return _modemStream->print(value);
@@ -107,25 +129,33 @@ size_t Sodaq_GSM_Modem::write(char value)
 size_t Sodaq_GSM_Modem::writeLn(const char* buffer)
 {
     size_t i = write(buffer);
-    return i + write(SODAQ_GSM_TERMINATOR);
+    return i + writeLn();
 }
 
 size_t Sodaq_GSM_Modem::writeLn(uint8_t value)
 {
     size_t i = write(value);
-    return i + write(SODAQ_GSM_TERMINATOR);
+    return i + writeLn();
 }
 
 size_t Sodaq_GSM_Modem::writeLn(uint32_t value)
 {
     size_t i = write(value);
-    return i + write(SODAQ_GSM_TERMINATOR);
+    return i + writeLn();
 }
 
 size_t Sodaq_GSM_Modem::writeLn(char value)
 {
     size_t i = write(value);
-    return i + write(SODAQ_GSM_TERMINATOR);
+    return i + writeLn();
+}
+
+size_t Sodaq_GSM_Modem::writeLn()
+{
+    debugPrintLn();
+    size_t i = write('\r');
+    _appendCommand = false;
+    return i;
 }
 
 // Initializes the input buffer and makes sure it is only initialized once. 

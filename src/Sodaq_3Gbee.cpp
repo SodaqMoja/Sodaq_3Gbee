@@ -1582,7 +1582,7 @@ bool Sodaq_3Gbee::sendSms(const char* phoneNumber, const char* buffer)
 {
     write("AT+CMGS=\"");
     write(phoneNumber);
-    write("\"" CR);
+    writeLn("\"");
 
     if (readResponse() == ResponsePrompt) {
         for (size_t i = 0; i < strlen(buffer); i++) {
