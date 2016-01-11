@@ -237,7 +237,10 @@ public:
     // Creates an HTTP request using the (optional) given buffer and 
     // (optionally) returns the received data.
     // endpoint should include the initial "/".
-    virtual size_t httpRequest(const char* url, uint16_t port, const char* endpoint, HttpRequestTypes requestType = GET, char* responseBuffer = NULL, size_t responseSize = 0, const char* sendBuffer = NULL, size_t sendSize = 0) = 0;
+    virtual size_t httpRequest(const char* url, uint16_t port, const char* endpoint,
+            HttpRequestTypes requestType = GET,
+            char* responseBuffer = NULL, size_t responseSize = 0,
+            const char* sendBuffer = NULL, size_t sendSize = 0) = 0;
 
     // ==== Ftp
 
