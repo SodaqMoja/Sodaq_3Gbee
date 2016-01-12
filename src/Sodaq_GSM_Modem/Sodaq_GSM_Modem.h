@@ -153,6 +153,8 @@ public:
     // Returns true if the modem is connected to the network and has an activated data connection.
     virtual bool isConnected() = 0;
 
+    uint8_t getLastCSQ() const { return _lastCSQ; }
+
     // Returns the current status of the network.
     virtual NetworkRegistrationStatuses getNetworkStatus() = 0;
 
@@ -228,7 +230,7 @@ public:
             char* responseBuffer = NULL, size_t responseSize = 0,
             const char* sendBuffer = NULL, size_t sendSize = 0) = 0;
 
-    // ==== Ftp
+    // ==== FTP
 
     // Opens an FTP connection.
     virtual bool openFtpConnection(const char* server, const char* username, const char* password, FtpModes ftpMode) = 0;
@@ -256,7 +258,7 @@ public:
     // Fails immediatelly if there is no open FTP file.
     virtual bool closeFtpFile() = 0;
 
-    // ==== Sms
+    // ==== SMS
     
     // Gets an SMS list according to the given filter and puts the indexes in the "indexList".
     // Returns the number of indexes written to the list or -1 in case of error.
@@ -303,6 +305,12 @@ protected:
     // This flag keeps track if the next write is the continuation of the current command
     // A Carriage Return will reset this flag.
     bool _appendCommand;
+
+    // This is the value of the most recent CSQ
+    uint8_t _lastCSQ;
+
+    // This is the number of second it took when CSQ was record last
+    uint8_t _CSQtime;
 
     // Initializes the input buffer and makes sure it is only initialized once.
     // Safe to call multiple times.
