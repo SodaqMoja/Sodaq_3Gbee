@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <Stream.h>
-#include "Sodaq_GSM_Modem/Sodaq_GSM_Modem.h"
+#include "Sodaq_GSM_Modem.h"
 
 enum TriBoolStates
 {
