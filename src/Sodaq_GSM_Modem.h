@@ -220,6 +220,25 @@ public:
     // Returns true if successful.
     virtual bool closeSocket(uint8_t socket) = 0;
 
+    // ==== TCP
+
+    // Open a TCP connection
+    // This is merely a convenience wrapper which can use socket functions.
+    virtual bool openTCP(const char *apn, const char *apnuser, const char *apnpwd,
+            const char *server, int port, bool transMode=false) = 0;
+
+    // Close the TCP connection
+    // This is merely a convenience wrapper which can use socket functions.
+    virtual void closeTCP(bool switchOff=true) = 0;
+
+    // Send data via TCP
+    // This is merely a convenience wrapper which can use socket functions.
+    virtual bool sendDataTCP(const uint8_t *data, size_t data_len) = 0;
+
+    // Receive data via TCP
+    // This is merely a convenience wrapper which can use socket functions.
+    virtual bool receiveDataTCP(uint8_t *data, size_t data_len, uint16_t timeout=4000) = 0;
+
     // ==== HTTP
 
     // Creates an HTTP request using the (optional) given buffer and 

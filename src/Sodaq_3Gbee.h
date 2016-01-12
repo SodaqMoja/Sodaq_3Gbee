@@ -110,6 +110,25 @@ public:
 
     void waitForSocketToCloseByRemote(uint8_t socket);
 
+    // ==== TCP
+
+    // Open a TCP connection
+    // This is merely a convenience wrapper which can use socket functions.
+    bool openTCP(const char *apn, const char *apnuser, const char *apnpwd,
+            const char *server, int port, bool transMode=false);
+
+    // Close the TCP connection
+    // This is merely a convenience wrapper which can use socket functions.
+    void closeTCP(bool switchOff=true);
+
+    // Send data via TCP
+    // This is merely a convenience wrapper which can use socket functions.
+    bool sendDataTCP(const uint8_t *data, size_t data_len);
+
+    // Receive data via TCP
+    // This is merely a convenience wrapper which can use socket functions.
+    bool receiveDataTCP(uint8_t *data, size_t data_len, uint16_t timeout=4000);
+
     // ==== HTTP
 
     // Creates an HTTP request using the (optional) given buffer and 

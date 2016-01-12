@@ -1077,6 +1077,34 @@ void Sodaq_3Gbee::waitForSocketToCloseByRemote(uint8_t socket)
     };
 }
 
+// ==== TCP
+
+bool Sodaq_3Gbee::openTCP(const char *apn, const char *apnuser, const char *apnpwd,
+            const char *server, int port, bool transMode)
+{
+    // TODO
+    return false;
+}
+
+void Sodaq_3Gbee::closeTCP(bool switchOff)
+{
+    // TODO
+}
+
+bool Sodaq_3Gbee::sendDataTCP(const uint8_t *data, size_t data_len)
+{
+    // TODO
+    return false;
+}
+
+bool Sodaq_3Gbee::receiveDataTCP(uint8_t *data, size_t data_len, uint16_t timeout)
+{
+    // TODO
+    return false;
+}
+
+// ==== HTTP
+
 // Creates an HTTP request using the (optional) given buffer and 
 // (optionally) returns the received data.
 // endpoint should include the initial "/".
