@@ -110,7 +110,10 @@ public:
     // Returns true if successful.
     bool closeSocket(uint8_t socket);
 
-    void waitForSocketToCloseByRemote(uint8_t socket);
+    // Blocks waiting for the given socket to be reported closed.
+    // This method should be called only after closeSocket() or when the remote is expected to close the socket.
+    // Times out after 60 seconds.
+    void waitForSocketClose(uint8_t socket);
 
     // ==== TCP
 

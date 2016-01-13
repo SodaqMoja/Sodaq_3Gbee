@@ -1065,9 +1065,12 @@ bool Sodaq_3Gbee::closeSocket(uint8_t socket)
     return (readResponse(NULL, 20000) == ResponseOK);
 }
 
-void Sodaq_3Gbee::waitForSocketToCloseByRemote(uint8_t socket)
+// Blocks waiting for the given socket to be reported closed.
+// This method should be called only after closeSocket() or when the remote is expected to close the socket.
+// Times out after 60 seconds.
+void Sodaq_3Gbee::waitForSocketClose(uint8_t socket)
 {
-    debugPrint("[waitForSocketToCloseByRemote]: ");
+    debugPrint("[waitForSocketClose]: ");
     debugPrintLn(socket);
 
     uint32_t start = millis();
