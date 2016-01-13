@@ -1060,6 +1060,7 @@ size_t Sodaq_3Gbee::socketReceive(uint8_t socket, char* buffer, size_t size)
             outputIndex++;
         }
 
+        _socketPendingBytes[socket] -= count;
         return count;
     }
 
