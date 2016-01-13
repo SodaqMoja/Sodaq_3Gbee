@@ -967,7 +967,7 @@ bool Sodaq_3Gbee::connectSocket(uint8_t socket, const char* host, uint16_t port)
 
 // Sends the given buffer through the given socket.
 // Returns true if successful.
-bool Sodaq_3Gbee::socketSend(uint8_t socket, const char* buffer, size_t size)
+bool Sodaq_3Gbee::socketSend(uint8_t socket, const uint8_t* buffer, size_t size)
 {
     // TODO see if we should keep an array of sockets so that the UDP-specific 
     // commands can be used instead, without first initializing the UDP socket
@@ -1013,10 +1013,9 @@ ResponseTypes Sodaq_3Gbee::_usordParser(ResponseTypes& response, const char* buf
 }
 
 // Reads data from the given socket into the given buffer.
-// Does not append a null terminator.
 // Returns the number of bytes written to the buffer.
 // NOTE: if the modem hasn't reported available data, it blocks for up to 10 seconds waiting.
-size_t Sodaq_3Gbee::socketReceive(uint8_t socket, char* buffer, size_t size)
+size_t Sodaq_3Gbee::socketReceive(uint8_t socket, uint8_t* buffer, size_t size)
 {
     if (socket >= ARRAY_SIZE(_socketPendingBytes)) {
         return 0;

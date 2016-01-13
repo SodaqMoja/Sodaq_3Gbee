@@ -209,12 +209,11 @@ public:
     
     // Sends the given buffer through the given socket.
     // Returns true if successful.
-    virtual bool socketSend(uint8_t socket, const char* buffer, size_t size) = 0;
+    virtual bool socketSend(uint8_t socket, const uint8_t* buffer, size_t size) = 0;
     
     // Reads data from the given socket into the given buffer.
-    // Does not append a null terminator.
     // Returns the number of bytes written to the buffer.
-    virtual size_t socketReceive(uint8_t socket, char* buffer, size_t size) = 0;
+    virtual size_t socketReceive(uint8_t socket, uint8_t* buffer, size_t size) = 0;
     
     // Closes the given socket.
     // Returns true if successful.
