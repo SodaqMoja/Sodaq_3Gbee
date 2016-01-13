@@ -1015,14 +1015,25 @@ ResponseTypes Sodaq_3Gbee::_usordParser(ResponseTypes& response, const char* buf
 // Reads data from the given socket into the given buffer.
 // Does not append a null terminator.
 // Returns the number of bytes written to the buffer.
+// NOTE: if the modem hasn't reported available data, it blocks for up to 10 seconds waiting.
 size_t Sodaq_3Gbee::socketReceive(uint8_t socket, char* buffer, size_t size)
 {
     if (socket >= ARRAY_SIZE(_socketPendingBytes)) {
         return 0;
     }
 
+    // if there are no data available yet, block for some seconds while checking
+    uint32_t start = millis();
+    while (_socketPendingBytes[socket] == 0 && isAlive() && !TIMEOUT(start, 10000)) {
+        delay(5);
+    }
+
     size_t pending = _socketPendingBytes[socket];
     size_t count = (pending > size) ? size : pending;
+
+    if (pending == 0) {
+        return 0;
+    }
 
     // bound the count, as the socket bytes are in hex string (so 2 * bytes)
     if (count > MAX_SOCKET_BUFFER/2) {

@@ -121,9 +121,6 @@ void setup()
                 MySerial.println("socket connected");
 
                 sodaq_3gbee.socketSend(socket, "123456789", 9);
-                for (int i = 0; i < 10; i++) {
-                    sodaq_3gbee.isAlive(); // exploit this to allow URC to be read
-                }
 
                 char receiveBuffer[128];
                 size_t bytesRead = sodaq_3gbee.socketReceive(socket, receiveBuffer, sizeof(receiveBuffer));

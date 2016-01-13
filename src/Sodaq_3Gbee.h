@@ -104,6 +104,7 @@ public:
     // Reads data from the given socket into the given buffer.
     // Does not append a null terminator.
     // Returns the number of bytes written to the buffer.
+    // NOTE: if the modem hasn't reported available data, it blocks for up to 10 seconds waiting.
     size_t socketReceive(uint8_t socket, char* buffer, size_t size);
 
     // Closes the given socket.
