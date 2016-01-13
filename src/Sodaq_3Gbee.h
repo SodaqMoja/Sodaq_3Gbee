@@ -22,6 +22,9 @@ typedef ResponseTypes(*CallbackMethodPtr)(ResponseTypes& response, const char* b
 
 class Sodaq_3Gbee: public Sodaq_GSM_Modem {
 public:
+    Sodaq_3Gbee();
+    ~Sodaq_3Gbee() {}
+
     // Returns true if the modem replies to "AT" commands without timing out.
     bool isAlive();
 
@@ -228,6 +231,7 @@ private:
     uint8_t ftpCommandURC[2];
     char ftpFilename[256 + 1]; // always null terminated
     uint8_t ftpDirectoryChangeCounter; // counts how many nested directories were changed, to revert on close
+    int _openTCPsocket;
 
     static bool startsWith(const char* pre, const char* str);
     static size_t ipToString(IP_t ip, char* buffer, size_t size);

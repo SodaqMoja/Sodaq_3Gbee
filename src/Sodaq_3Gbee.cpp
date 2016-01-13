@@ -66,6 +66,11 @@ static Sodaq_3GbeeOnOff sodaq_3gbee_onoff;
 
 Sodaq_3Gbee sodaq_3gbee;
 
+Sodaq_3Gbee::Sodaq_3Gbee()
+{
+    _openTCPsocket = -1;
+}
+
 bool Sodaq_3Gbee::startsWith(const char* pre, const char* str)
 {
     return (strncmp(pre, str, strlen(pre)) == 0);
@@ -1096,25 +1101,54 @@ void Sodaq_3Gbee::waitForSocketClose(uint8_t socket)
 bool Sodaq_3Gbee::openTCP(const char *apn, const char *apnuser, const char *apnpwd,
             const char *server, int port, bool transMode)
 {
-    // TODO
-    return false;
+    // TODO Verify this
+    bool retval = false;
+    if (on()) {
+        if (sodaq_3gbee.connect(NULL, apn, apnuser, apnpwd, NoAuthorization)) {
+            // IP_t ip = sodaq_3gbee.getHostIP(server);
+            _openTCPsocket = sodaq_3gbee.createSocket(TCP);
+            // TODO Use ip instead of hostname
+            if (sodaq_3gbee.connectSocket(_openTCPsocket, server, port)) {
+                retval = true;
+            }
+        }
+    }
+    return retval;
 }
 
 void Sodaq_3Gbee::closeTCP(bool switchOff)
 {
-    // TODO
+    // TODO Verify this
+    if (_openTCPsocket >= 0) {
+        closeSocket(_openTCPsocket);
+        //waitForSocketClose(_openTCPsocket);
+        _openTCPsocket = -1;
+    }
 }
 
 bool Sodaq_3Gbee::sendDataTCP(const uint8_t *data, size_t data_len)
 {
-    // TODO
-    return false;
+    // TODO Verify this
+    bool retval = false;
+    if (_openTCPsocket >= 0) {
+        if (socketSend(_openTCPsocket, data, data_len)) {
+            retval = true;
+        }
+    }
+    return retval;
 }
 
 bool Sodaq_3Gbee::receiveDataTCP(uint8_t *data, size_t data_len, uint16_t timeout)
 {
-    // TODO
-    return false;
+    // TODO Verify this
+    bool retval = false;
+    if (_openTCPsocket >= 0) {
+        size_t nrbytes = socketReceive(_openTCPsocket, data, data_len);
+        if (nrbytes == data_len) {
+            retval = true;
+        }
+    }
+    return retval;
 }
 
 // ==== HTTP

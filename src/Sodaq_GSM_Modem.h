@@ -109,6 +109,7 @@ class Sodaq_GSM_Modem {
 public:
     // Constructor
     Sodaq_GSM_Modem();
+    virtual ~Sodaq_GSM_Modem() {}
 
     // Sets the onoff instance
     void setOnOff(Sodaq_OnOffBee & onoff) { _onoff = &onoff; }
