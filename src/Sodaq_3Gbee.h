@@ -7,6 +7,8 @@
 #include <Stream.h>
 #include "Sodaq_GSM_Modem.h"
 
+#define SOCKET_COUNT 7
+
 enum TriBoolStates
 {
     TriBoolFalse,
@@ -217,9 +219,9 @@ protected:
             (void*)callbackParameter, (void*)callbackParameter2, outSize, timeout);
     };
 private:
-    uint16_t _socketPendingBytes[7]; // TODO add getter
+    uint16_t _socketPendingBytes[SOCKET_COUNT]; // TODO add getter
     tribool_t _httpRequestSuccessBit[HttpRequestTypesMAX];
-    bool _socketClosedBit[7];
+    bool _socketClosedBit[SOCKET_COUNT];
     uint8_t ftpCommandURC[2];
     char ftpFilename[256 + 1]; // always null terminated
     uint8_t ftpDirectoryChangeCounter; // counts how many nested directories were changed, to revert on close
