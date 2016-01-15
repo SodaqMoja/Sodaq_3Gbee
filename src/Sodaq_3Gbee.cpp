@@ -58,8 +58,6 @@ static inline void wdt_reset()
 #endif
 
 #define BLOCK_TIMEOUT -1
-#define NOW (uint32_t)millis()
-#define TIMEOUT(x, ms) ((uint32_t)ms < (uint32_t)millis()-(uint32_t)x) 
 #define DEFAULT_PROFILE "0"
 #define HIGH_BAUDRATE 57600
 #define MAX_SOCKET_BUFFER 512
@@ -67,6 +65,15 @@ static inline void wdt_reset()
 #define DEFAULT_HTTP_RECEIVE_TMP_FILENAME "http_last_response_0"
 #define DEFAULT_FTP_TMP_FILENAME "ftp_tmp_file"
 #define CTRL_Z (static_cast<char>(0x1A))
+
+#define NOW (uint32_t)millis()
+
+static inline bool is_timedout(uint32_t from, uint32_t nr_ms) __attribute__((always_inline));
+static inline bool is_timedout(uint32_t from, uint32_t nr_ms)
+{
+    return (millis() - from) > nr_ms;
+}
+
 
 // A specialized class to switch on/off the 3Gbee module
 // The VCC3.3 pin is switched by the Autonomo BEE_VCC pin
@@ -208,7 +215,7 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
         }
 
         delay(10);
-    } while (!TIMEOUT(from, timeout));
+    } while (!is_timedout(from, timeout));
 
     if (outSize) {
         *outSize = 0;
@@ -240,13 +247,13 @@ bool Sodaq_3Gbee::isConnected()
     return false;
 }
 
-bool Sodaq_3Gbee::waitForFtpCommandResult(uint8_t ftpCommandIndex)
+bool Sodaq_3Gbee::waitForFtpCommandResult(uint8_t ftpCommandIndex, uint32_t timeout)
 {
     uint32_t start = millis();
 
     ftpCommandURC[0] = 0xFF; // set to unused value to clear (0 is used)
     ftpCommandURC[1] = 0;
-    while (ftpCommandURC[0] != ftpCommandIndex && !TIMEOUT(start, 10000)) {
+    while (ftpCommandURC[0] != ftpCommandIndex && !is_timedout(start, timeout)) {
         isAlive();
         delay(5);
     }
@@ -1054,7 +1061,7 @@ size_t Sodaq_3Gbee::socketReceive(uint8_t socket, uint8_t* buffer, size_t size)
 
     // if there are no data available yet, block for some seconds while checking
     uint32_t start = millis();
-    while (_socketPendingBytes[socket] == 0 && isAlive() && !TIMEOUT(start, 10000)) {
+    while (_socketPendingBytes[socket] == 0 && isAlive() && !is_timedout(start, 10000)) {
         delay(5);
     }
 
@@ -1110,14 +1117,14 @@ bool Sodaq_3Gbee::closeSocket(uint8_t socket)
 // Blocks waiting for the given socket to be reported closed.
 // This method should be called only after closeSocket() or when the remote is expected to close the socket.
 // Times out after 60 seconds.
-void Sodaq_3Gbee::waitForSocketClose(uint8_t socket)
+void Sodaq_3Gbee::waitForSocketClose(uint8_t socket, uint32_t timeout)
 {
     debugPrint("[waitForSocketClose]: ");
     debugPrintLn(socket);
 
     uint32_t start = millis();
 
-    while (isAlive() && (!_socketClosedBit[socket]) && (!TIMEOUT(start, 60000))) {
+    while (isAlive() && (!_socketClosedBit[socket]) && (!is_timedout(start, timeout))) {
         delay(5);
     };
 }
@@ -1267,7 +1274,7 @@ size_t Sodaq_3Gbee::httpRequest(const char* url, uint16_t port,
 
     // check for success while checking URCs
     uint32_t start = millis();
-    while ((_httpRequestSuccessBit[requestType] == TriBoolUndefined) && !TIMEOUT(start, 30000)) {
+    while ((_httpRequestSuccessBit[requestType] == TriBoolUndefined) && !is_timedout(start, 30000)) {
         isAlive();
         delay(5);
     }

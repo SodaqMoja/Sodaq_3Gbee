@@ -116,7 +116,8 @@ public:
     // Blocks waiting for the given socket to be reported closed.
     // This method should be called only after closeSocket() or when the remote is expected to close the socket.
     // Times out after 60 seconds.
-    void waitForSocketClose(uint8_t socket);
+    // TODO Figure out what a good timeout value is. 60 seconds is very long.
+    void waitForSocketClose(uint8_t socket, uint32_t timeout=60000);
 
     // ==== TCP
 
@@ -239,7 +240,7 @@ private:
     bool setSimPin(const char* simPin);
 
     // returns true if URC returns 1, false in case URC returns 0 or in case of timeout
-    bool waitForFtpCommandResult(uint8_t ftpCommandIndex);
+    bool waitForFtpCommandResult(uint8_t ftpCommandIndex, uint32_t timeout=10000);
     bool changeFtpDirectory(const char* directory);
     void resetFtpDirectoryIfNeeded();
 
