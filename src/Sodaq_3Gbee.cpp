@@ -1,3 +1,26 @@
+#include <Arduino.h>
+
+#if defined(ARDUINO_ARCH_SAMD)
+static inline void wait_while_wdt_syncbusy() __attribute__((always_inline));
+static inline void wait_while_wdt_syncbusy()
+{
+  while (WDT->STATUS.reg & WDT_STATUS_SYNCBUSY) {
+  }
+}
+
+static inline void wdt_reset() __attribute__((always_inline));
+static inline void wdt_reset()
+{
+  // Reset count
+  WDT->CLEAR.reg = WDT_CLEAR_CLEAR_KEY;
+  wait_while_wdt_syncbusy();
+}
+#elif defined(ARDUINO_ARCH_AVR)
+#include <avr/wdt.h>
+#else
+#error "Only AVR or SAMD supported"
+#endif
+
 #include "Sodaq_3Gbee.h"
 
 #define DEBUG
@@ -84,14 +107,16 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
     uint32_t from = NOW;
 
     do {
-        int count = readLn(buffer, size, 2000);
+        // 250ms,  how many bytes at which baudrate?
+        int count = readLn(buffer, size, 250);
+        wdt_reset();
         
         if (count > 0) {
             if (outSize) {
                 *outSize = count;
             }
 
-            debugPrint("[readResponse]: ");
+            debugPrint("[rdResp]: ");
             debugPrint(buffer);
             debugPrint(" (");
             debugPrint(count);
@@ -189,6 +214,7 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
         *outSize = 0;
     }
 
+    debugPrintLn("[rdResp]: timed out");
     return ResponseTimeout;
 }
 
@@ -268,8 +294,8 @@ void Sodaq_3Gbee::cleanupTempFiles()
 bool Sodaq_3Gbee::isAlive()
 {
     writeLn(STR_AT);
-   
-    return (readResponse() == ResponseOK);
+
+    return (readResponse(NULL, 450) == ResponseOK);
 }
 
 // Sets the apn, apn username and apn password to the modem.
@@ -1123,6 +1149,9 @@ void Sodaq_3Gbee::closeTCP(bool switchOff)
         closeSocket(_openTCPsocket);
         //waitForSocketClose(_openTCPsocket);
         _openTCPsocket = -1;
+    }
+    if (switchOff) {
+        off();
     }
 }
 
