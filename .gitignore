@@ -1,4 +1,20 @@
+# Stuff that is created by make-zip
+*.zip
+
+# Emacs
+*~
+
+# vim, vi, etc
+.*.swp
+
+# MacOS
+.DS_Store
+
+# Visual Studio
 __vm
 *.suo
 *.sln
 *.vcx*
+
+# Other temp files
+*.bak
