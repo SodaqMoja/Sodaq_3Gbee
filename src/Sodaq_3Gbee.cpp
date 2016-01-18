@@ -1,25 +1,5 @@
 #include <Arduino.h>
-
-#if defined(ARDUINO_ARCH_SAMD)
-static inline void wait_while_wdt_syncbusy() __attribute__((always_inline));
-static inline void wait_while_wdt_syncbusy()
-{
-  while (WDT->STATUS.reg & WDT_STATUS_SYNCBUSY) {
-  }
-}
-
-static inline void wdt_reset() __attribute__((always_inline));
-static inline void wdt_reset()
-{
-  // Reset count
-  WDT->CLEAR.reg = WDT_CLEAR_CLEAR_KEY;
-  wait_while_wdt_syncbusy();
-}
-#elif defined(ARDUINO_ARCH_AVR)
-#include <avr/wdt.h>
-#else
-#error "Only AVR or SAMD supported"
-#endif
+#include "Sodaq_wdt.h"
 
 #include "Sodaq_3Gbee.h"
 
@@ -116,7 +96,7 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
     do {
         // 250ms,  how many bytes at which baudrate?
         int count = readLn(buffer, size, 250);
-        wdt_reset();
+        sodaq_wdt_reset();
         
         if (count > 0) {
             if (outSize) {
