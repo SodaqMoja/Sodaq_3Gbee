@@ -851,7 +851,7 @@ IP_t Sodaq_3Gbee::getHostIP(const char* host)
     write("AT+UDNSRN=0,\"");
     write(host);
     writeLn("\"");
-    if (readResponse<IP_t, uint8_t>(_udnsrnParser, &ip, NULL) == ResponseOK) {
+    if (readResponse<IP_t, uint8_t>(_udnsrnParser, &ip, NULL, NULL, 70000) == ResponseOK) {
         return ip;
     }
 
