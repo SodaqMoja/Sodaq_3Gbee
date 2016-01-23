@@ -97,12 +97,19 @@ void Sodaq_GSM_Modem::writeProlog()
     }
 }
 
+// TODO is the result really needed?
 size_t Sodaq_GSM_Modem::write(const char* buffer)
 {
     writeProlog();
     debugPrint(buffer);
     
     return _modemStream->print(buffer);
+}
+
+// Write a byte, as binary data
+size_t Sodaq_GSM_Modem::writeByte(uint8_t value)
+{
+    return _modemStream->write(value);
 }
 
 size_t Sodaq_GSM_Modem::write(uint8_t value)
@@ -129,6 +136,7 @@ size_t Sodaq_GSM_Modem::write(char value)
     return _modemStream->print(value);
 };
 
+// TODO is the result really needed?
 size_t Sodaq_GSM_Modem::writeLn(const char* buffer)
 {
     size_t i = write(buffer);
@@ -242,13 +250,15 @@ size_t Sodaq_GSM_Modem::readBytesUntil(char terminator, char* buffer, size_t len
         index++;
     }
 
+    // TODO distinguise timeout from empty string?
+    // TODO return error for overflow?
     return index; // return number of characters, not including null terminator
 }
 
 // Fills the given "buffer" with up to "length" characters read from the modem stream.
 // It stops when a character read timesout or "length" characters have been read.
 // Returns the number of characters written to the buffer.
-size_t Sodaq_GSM_Modem::readBytes(char* buffer, size_t length)
+size_t Sodaq_GSM_Modem::readBytes(uint8_t* buffer, size_t length)
 {
     size_t count = 0;
 
@@ -259,10 +269,12 @@ size_t Sodaq_GSM_Modem::readBytes(char* buffer, size_t length)
             break;
         }
         
-        *buffer++ = static_cast<char>(c);
+        *buffer++ = static_cast<uint8_t>(c);
         count++;
     }
 
+    // TODO distinguise timeout from empty string?
+    // TODO return error for overflow?
     return count;
 }
 

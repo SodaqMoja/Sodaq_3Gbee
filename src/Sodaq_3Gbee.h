@@ -158,8 +158,9 @@ public:
     // Sends the given "buffer" to the (already) open FTP file.
     // Returns true if successful.
     // Fails immediatelly if there is no open FTP file.
-    bool ftpSend(const char* buffer, size_t size);
-    
+    bool ftpSend(const char* buffer);
+    bool ftpSend(const uint8_t* buffer, size_t size);
+
     // Fills the given "buffer" from the (already) open FTP file.
     // Returns true if successful.
     // Fails immediatelly if there is no open FTP file.
@@ -188,9 +189,9 @@ public:
     // Returns true if successful.
     bool sendSms(const char* phoneNumber, const char* buffer);
 
-    size_t readFile(const char* filename, char* buffer, size_t size);
+    size_t readFile(const char* filename, uint8_t* buffer, size_t size);
 
-    bool writeFile(const char* filename, const char* buffer, size_t size);
+    bool writeFile(const char* filename, const uint8_t* buffer, size_t size);
     
     bool deleteFile(const char* filename);
 

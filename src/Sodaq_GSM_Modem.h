@@ -268,7 +268,8 @@ public:
     // Sends the given "buffer" to the (already) open FTP file.
     // Returns true if successful.
     // Fails immediatelly if there is no open FTP file.
-    virtual bool ftpSend(const char* buffer, size_t size) = 0;
+    virtual bool ftpSend(const char* buffer) = 0;
+    virtual bool ftpSend(const uint8_t* buffer, size_t size) = 0;
 
     // Fills the given "buffer" from the (already) open FTP file.
     // Returns true if successful.
@@ -364,10 +365,10 @@ protected:
     // Fills the given "buffer" with up to "length" characters read from the modem stream.
     // It stops when a character read timesout or "length" characters have been read.
     // Returns the number of characters written to the buffer.
-    size_t readBytes(char* buffer, size_t length);
+    size_t readBytes(uint8_t* buffer, size_t length);
 
-    // Reads a line (up to but not including the SODAQ_GSM_TERMINATOR) from the modem
-    // stream into the "buffer". The buffer is terminated with null.
+    // Reads a line from the modem stream into the "buffer". The line terminator is not
+    // written into the buffer. The buffer is terminated with null.
     // Returns the number of bytes read, not including the null terminator.
     size_t readLn(char* buffer, size_t size, long timeout = DEFAULT_TIMEOUT);
 
@@ -377,6 +378,7 @@ protected:
 
     // Methods to write to the modem stream
     size_t write(const char* buffer);
+    size_t writeByte(uint8_t value);
     size_t write(uint8_t value);
     size_t write(uint32_t value);
     size_t write(char value);

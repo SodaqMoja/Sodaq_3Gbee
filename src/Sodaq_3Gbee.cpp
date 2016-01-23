@@ -1221,7 +1221,7 @@ size_t Sodaq_3Gbee::httpRequest(const char* url, uint16_t port,
 
         deleteFile(DEFAULT_HTTP_SEND_TMP_FILENAME); // cleanup the file first (if exists)
 
-        if (!writeFile(DEFAULT_HTTP_SEND_TMP_FILENAME, sendBuffer, sendSize)) {
+        if (!writeFile(DEFAULT_HTTP_SEND_TMP_FILENAME, (uint8_t*)sendBuffer, sendSize)) {
             debugPrintLn(DEBUG_STR_ERROR "Could not create the http tmp file!");
             return 0;
         }
@@ -1261,7 +1261,7 @@ size_t Sodaq_3Gbee::httpRequest(const char* url, uint16_t port,
 
     if (_httpRequestSuccessBit[requestType] == TriBoolTrue) {
         if (responseBuffer && responseSize > 0) {
-            return readFile(DEFAULT_HTTP_RECEIVE_TMP_FILENAME, responseBuffer, responseSize);
+            return readFile(DEFAULT_HTTP_RECEIVE_TMP_FILENAME, (uint8_t*)responseBuffer, responseSize);
         }
     }
     else if (_httpRequestSuccessBit[requestType] == TriBoolFalse) {
@@ -1319,7 +1319,7 @@ int8_t Sodaq_3Gbee::_httpModemIndexToRequestType(uint8_t modemIndex)
 }
 
 // no string termination
-size_t Sodaq_3Gbee::readFile(const char* filename, char* buffer, size_t size)
+size_t Sodaq_3Gbee::readFile(const char* filename, uint8_t* buffer, size_t size)
 {
     // TODO escape filename characters { '"', ',', }
     
@@ -1407,7 +1407,7 @@ error:
     return 0;
 }
 
-bool Sodaq_3Gbee::writeFile(const char* filename, const char* buffer, size_t size)
+bool Sodaq_3Gbee::writeFile(const char* filename, const uint8_t* buffer, size_t size)
 {
     // TODO escape filename characters
     write("AT+UDWNFILE=\"");
@@ -1531,8 +1531,16 @@ bool Sodaq_3Gbee::openFtpFile(const char* filename, const char* path)
 
 // Sends the given "buffer" to the (already) open FTP file.
 // Returns true if successful.
-// Fails immediatelly if there is no open FTP file.
-bool Sodaq_3Gbee::ftpSend(const char* buffer, size_t size)
+// Fails immediately if there is no open FTP file.
+bool Sodaq_3Gbee::ftpSend(const char* buffer)
+{
+    return ftpSend((uint8_t*)buffer, strlen(buffer));
+}
+
+// Sends the given "buffer" to the (already) open FTP file.
+// Returns true if successful.
+// Fails immediately if there is no open FTP file.
+bool Sodaq_3Gbee::ftpSend(const uint8_t* buffer, size_t size)
 {
     // quick sanity check
     if (ftpFilename[0] == '\0') {
@@ -1559,7 +1567,7 @@ bool Sodaq_3Gbee::ftpSend(const char* buffer, size_t size)
 
 // Fills the given "buffer" from the (already) open FTP file.
 // Returns true if successful.
-// Fails immediatelly if there is no open FTP file.
+// Fails immediately if there is no open FTP file.
 int Sodaq_3Gbee::ftpReceive(char* buffer, size_t size)
 {
     // quick sanity check
@@ -1577,7 +1585,7 @@ int Sodaq_3Gbee::ftpReceive(char* buffer, size_t size)
         return 0;
     }
 
-    return readFile(DEFAULT_FTP_TMP_FILENAME, buffer, size);
+    return readFile(DEFAULT_FTP_TMP_FILENAME, (uint8_t*)buffer, size);
 }
 
 // Closes the open FTP file.
