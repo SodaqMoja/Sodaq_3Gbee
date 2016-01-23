@@ -30,7 +30,10 @@ Sodaq_GSM_Modem::Sodaq_GSM_Modem() :
     _modemStream(0),
     _diagStream(0),
     _inputBufferSize(SODAQ_GSM_MODEM_DEFAULT_INPUT_BUFFER_SIZE),
-    _inputBuffer(0), 
+    _inputBuffer(0),
+    _apn(0),
+    _apnUser(0),
+    _apnPass(0),
     _timeout(DEFAULT_TIMEOUT),
     _onoff(0),
     _baudRateChangeCallbackPtr(0)
@@ -176,6 +179,27 @@ void Sodaq_GSM_Modem::initBuffer()
 void Sodaq_GSM_Modem::setModemStream(Stream& stream)
 {
     this->_modemStream = &stream;
+}
+
+void Sodaq_GSM_Modem::setApn(const char * apn)
+{
+    size_t len = strlen(apn);
+    _apn = static_cast<char*>(realloc(_apn, len + 1));
+    strcpy(_apn, apn);
+}
+
+void Sodaq_GSM_Modem::setApnUser(const char * user)
+{
+    size_t len = strlen(user);
+    _apnUser = static_cast<char*>(realloc(_apnUser, len + 1));
+    strcpy(_apnUser, user);
+}
+
+void Sodaq_GSM_Modem::setApnPass(const char * pass)
+{
+    size_t len = strlen(pass);
+    _apnPass = static_cast<char*>(realloc(_apnPass, len + 1));
+    strcpy(_apnPass, pass);
 }
 
 // Returns a character from the modem stream if read within _timeout ms or -1 otherwise.

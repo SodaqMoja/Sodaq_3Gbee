@@ -85,7 +85,7 @@ enum ResponseTypes {
 typedef uint32_t IP_t;
 
 // callback for changing the baudrate of the modem stream.
-typedef void(*BaudRateChangeCallbackPtr)(uint32_t newBaudrate);
+typedef void (*BaudRateChangeCallbackPtr)(uint32_t newBaudrate);
 
 #define DEFAULT_READ_MS 5000 // Used in readResponse()
 
@@ -121,14 +121,17 @@ public:
     bool off() const;
 
     // Sets the optional "Diagnostics and Debug" stream.
-    void setDiag(Stream& stream) { this->_diagStream = &stream; };
+    void setDiag(Stream &stream) { _diagStream = &stream; }
+    void setDiag(Stream *stream) { _diagStream = stream; }
 
     // Sets the size of the input buffer.
     // Needs to be called before init().
     void setInputBufferSize(size_t value) { this->_inputBufferSize = value; };
 
-    // Returns true if the modem replies to "AT" commands without timing out.
-    virtual bool isAlive() = 0;
+    // Store APN and user and password
+    void setApn(const char *apn);
+    void setApnUser(const char *user);
+    void setApnPass(const char *pass);
 
     // Initializes the modem instance. Sets the modem stream and the on-off power pins.
     virtual void init(Stream& stream, int8_t vcc33Pin, int8_t onoffPin, int8_t statusPin) = 0;
@@ -142,7 +145,7 @@ public:
     void enableBaudrateChange(BaudRateChangeCallbackPtr callback) { _baudRateChangeCallbackPtr = callback; };
 
     // Sets the apn, apn username and apn password to the modem.
-    virtual bool setAPN(const char* apn, const char* username, const char* password) = 0;
+    virtual bool sendAPN(const char* apn, const char* username, const char* password) = 0;
 
     // Turns on and initializes the modem, then connects to the network and activates the data connection.
     virtual bool connect(const char* simPin, const char* apn, const char* username,
@@ -261,7 +264,7 @@ public:
     // filename should be limited to 256 characters (excl. null terminator)
     // path should be limited to 512 characters (excl. null temrinator)
     virtual bool openFtpFile(const char* filename, const char* path = NULL) = 0;
-    
+
     // Sends the given "buffer" to the (already) open FTP file.
     // Returns true if successful.
     // Fails immediatelly if there is no open FTP file.
@@ -312,6 +315,10 @@ protected:
     // The buffer used when reading from the modem. The space is allocated during init() via initBuffer().
     char* _inputBuffer;
 
+    char * _apn;
+    char * _apnUser;
+    char * _apnPass;
+
     // The timeout used by the stream helper methods contained in this class (such as timedRead()).
     uint32_t _timeout;
 
@@ -335,6 +342,12 @@ protected:
     // Safe to call multiple times.
     void initBuffer();
 
+    // Returns true if the modem is ON (and replies to "AT" commands without timing out)
+    virtual bool isAlive() = 0;
+
+    // Returns true if the modem is on.
+    bool isOn() const;
+
     // Sets the modem stream.
     void setModemStream(Stream& stream);
 
@@ -352,9 +365,6 @@ protected:
     // It stops when a character read timesout or "length" characters have been read.
     // Returns the number of characters written to the buffer.
     size_t readBytes(char* buffer, size_t length);
-
-    // Returns true if the modem is on.
-    bool isOn() const;
 
     // Reads a line (up to but not including the SODAQ_GSM_TERMINATOR) from the modem
     // stream into the "buffer". The buffer is terminated with null.
@@ -385,6 +395,5 @@ protected:
 
     virtual ResponseTypes readResponse(char* buffer, size_t size, size_t* outSize, uint32_t timeout = DEFAULT_READ_MS) = 0;
 };
-
 
 #endif

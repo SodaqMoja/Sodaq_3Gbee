@@ -28,9 +28,6 @@ public:
     // Returns true if the modem replies to "AT" commands without timing out.
     bool isAlive();
 
-    // Sets the apn, apn username and apn password to the modem.
-    bool setAPN(const char* apn, const char* username, const char* password);
-
     // Returns the default baud rate of the modem. 
     // To be used when initializing the modem stream for the first time.
     uint32_t getDefaultBaudrate() { return 9600; };
@@ -196,7 +193,11 @@ public:
     bool writeFile(const char* filename, const char* buffer, size_t size);
     
     bool deleteFile(const char* filename);
+
 protected:
+    // Sets the apn, apn username and apn password to the modem.
+    bool sendAPN(const char* apn, const char* username, const char* password);
+
     ResponseTypes readResponse(char* buffer, size_t size, CallbackMethodPtr parserMethod,
         void* callbackParameter, void* callbackParameter2 = NULL, size_t* outSize = NULL, uint32_t timeout = DEFAULT_READ_MS);
 
@@ -225,6 +226,7 @@ protected:
         return readResponse(_inputBuffer, _inputBufferSize, (CallbackMethodPtr)parserMethod, 
             (void*)callbackParameter, (void*)callbackParameter2, outSize, timeout);
     };
+
 private:
     uint16_t _socketPendingBytes[SOCKET_COUNT]; // TODO add getter
     tribool_t _httpRequestSuccessBit[HttpRequestTypesMAX];

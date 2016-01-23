@@ -286,7 +286,7 @@ bool Sodaq_3Gbee::isAlive()
 }
 
 // Sets the apn, apn username and apn password to the modem.
-bool Sodaq_3Gbee::setAPN(const char* apn, const char* username, const char* password)
+bool Sodaq_3Gbee::sendAPN(const char* apn, const char* username, const char* password)
 {
     write("AT+UPSD=" DEFAULT_PROFILE ",1,\"");
     write(apn);
@@ -428,7 +428,7 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
         }
     }
 
-    if (!setAPN(apn, username, password)) {
+    if (!sendAPN(apn, username, password)) {
         return false;
     }
 
