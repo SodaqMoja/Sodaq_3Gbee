@@ -1,3 +1,23 @@
+/*
+ * Copyright (c) 2015-2016 Kees Bakker.  All rights reserved.
+ *
+ * This file is part of GPRSbee.
+ *
+ * GPRSbee is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 3 of
+ * the License, or(at your option) any later version.
+ *
+ * GPRSbee is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with GPRSbee.  If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef _SODAQ_GSM_MODEM_h
 #define _SODAQ_GSM_MODEM_h
 
@@ -6,11 +26,8 @@
 #include <Stream.h>
 #include "Sodaq_OnOffBee.h"
 
+// TODO Add #if defined(), and change the name
 #define DEFAULT_TIMEOUT 1000
-
-#define SODAQ_GSM_MODEM_DEFAULT_INPUT_BUFFER_SIZE 128
-
-// TODO handle Watchdog, also use a define to turn handling on/off
 
 // Data authorization type.
 enum AuthorizationTypes {
@@ -133,9 +150,6 @@ public:
     void setApnUser(const char *user);
     void setApnPass(const char *pass);
 
-    // Initializes the modem instance. Sets the modem stream and the on-off power pins.
-    virtual void init(Stream& stream, int8_t vcc33Pin, int8_t onoffPin, int8_t statusPin) = 0;
-
     // Returns the default baud rate of the modem. 
     // To be used when initializing the modem stream for the first time.
     virtual uint32_t getDefaultBaudrate() = 0;
@@ -156,6 +170,9 @@ public:
 
     // Returns true if the modem is connected to the network and has an activated data connection.
     virtual bool isConnected() = 0;
+
+    void setMinSignalQuality(int q) { _minSignalQuality = q; }
+    uint8_t getCSQtime() const { return _CSQtime; }
 
     uint8_t getLastCSQ() const { return _lastCSQ; }
 
@@ -344,6 +361,9 @@ protected:
 
     // This is the number of second it took when CSQ was record last
     uint8_t _CSQtime;
+
+    // This is the minimum required CSQ to continue making the connection
+    int _minSignalQuality;
 
     // Initializes the input buffer and makes sure it is only initialized once.
     // Safe to call multiple times.
