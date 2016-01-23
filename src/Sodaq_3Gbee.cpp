@@ -1697,6 +1697,34 @@ bool Sodaq_3Gbee::sendSms(const char* phoneNumber, const char* buffer)
     return false;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+////////////////////    MQTT               /////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+bool Sodaq_3Gbee::openMQTT(const char * server, uint16_t port)
+{
+    return openTCP(_apn, _apnUser, _apnPass, server, port);
+}
+
+bool Sodaq_3Gbee::closeMQTT(bool switchOff)
+{
+    closeTCP(switchOff);
+    return true;        // Always succeed
+}
+
+bool Sodaq_3Gbee::sendMQTTPacket(uint8_t * pckt, size_t len)
+{
+    return sendDataTCP(pckt, len);
+}
+
+bool Sodaq_3Gbee::receiveMQTTPacket(uint8_t * pckt, size_t expected_len)
+{
+    return receiveDataTCP(pckt, expected_len);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////    Sodaq_3GbeeOnOff       /////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 Sodaq_3GbeeOnOff::Sodaq_3GbeeOnOff()
 {

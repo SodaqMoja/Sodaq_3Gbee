@@ -189,6 +189,12 @@ public:
     // Returns true if successful.
     bool sendSms(const char* phoneNumber, const char* buffer);
 
+    // MQTT (using this class as a transport)
+    bool openMQTT(const char * server, uint16_t port = 1883);
+    bool closeMQTT(bool switchOff=true);
+    bool sendMQTTPacket(uint8_t * pckt, size_t len);
+    bool receiveMQTTPacket(uint8_t * pckt, size_t expected_len);
+
     size_t readFile(const char* filename, uint8_t* buffer, size_t size);
 
     bool writeFile(const char* filename, const uint8_t* buffer, size_t size);
