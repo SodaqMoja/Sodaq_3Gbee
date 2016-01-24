@@ -18,7 +18,8 @@ enum TriBoolStates
 
 typedef TriBoolStates tribool_t;
 
-typedef ResponseTypes(*CallbackMethodPtr)(ResponseTypes& response, const char* buffer, size_t size, void* parameter, void* parameter2);
+typedef ResponseTypes (*CallbackMethodPtr)(ResponseTypes& response, const char* buffer, size_t size,
+        void* parameter, void* parameter2);
 
 class Sodaq_3Gbee: public Sodaq_GSM_Modem {
 public:
@@ -205,14 +206,15 @@ protected:
     // Sets the apn, apn username and apn password to the modem.
     bool sendAPN(const char* apn, const char* username, const char* password);
 
-    ResponseTypes readResponse(char* buffer, size_t size, CallbackMethodPtr parserMethod,
-        void* callbackParameter, void* callbackParameter2 = NULL, size_t* outSize = NULL, uint32_t timeout = DEFAULT_READ_MS);
-
     // override
     ResponseTypes readResponse(char* buffer, size_t size, size_t* outSize, uint32_t timeout = DEFAULT_READ_MS)
     {
         return readResponse(_inputBuffer, _inputBufferSize, NULL, NULL, NULL, outSize, timeout);
     };
+
+    ResponseTypes readResponse(char* buffer, size_t size,
+            CallbackMethodPtr parserMethod, void* callbackParameter, void* callbackParameter2 = NULL,
+            size_t* outSize = NULL, uint32_t timeout = DEFAULT_READ_MS);
     
     ResponseTypes readResponse(size_t* outSize = NULL, uint32_t timeout = DEFAULT_READ_MS)
     {
@@ -222,7 +224,9 @@ protected:
     ResponseTypes readResponse(CallbackMethodPtr parserMethod, void* callbackParameter,
         void* callbackParameter2 = NULL, size_t* outSize = NULL, uint32_t timeout = DEFAULT_READ_MS)
     {
-        return readResponse(_inputBuffer, _inputBufferSize, parserMethod, callbackParameter, callbackParameter2, outSize, timeout);
+        return readResponse(_inputBuffer, _inputBufferSize,
+                parserMethod, callbackParameter, callbackParameter2,
+                outSize, timeout);
     };
 
     template<typename T1, typename T2>
@@ -255,8 +259,8 @@ private:
 
     void cleanupTempFiles();
 
-    static int8_t _httpRequestTypeToModemIndex(HttpRequestTypes requestType);
-    static int8_t _httpModemIndexToRequestType(uint8_t modemIndex);
+    static int _httpRequestTypeToModemIndex(HttpRequestTypes requestType);
+    static int _httpModemIndexToRequestType(uint8_t modemIndex);
 
     // ==== Parser Methods
     static ResponseTypes _cpinParser(ResponseTypes& response, const char* buffer, size_t size, SimStatuses* simStatusResult, uint8_t* dummy);

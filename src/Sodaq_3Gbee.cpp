@@ -44,7 +44,7 @@
 #define DEFAULT_HTTP_SEND_TMP_FILENAME "http_tmp_put_0"
 #define DEFAULT_HTTP_RECEIVE_TMP_FILENAME "http_last_response_0"
 #define DEFAULT_FTP_TMP_FILENAME "ftp_tmp_file"
-#define CTRL_Z (static_cast<char>(0x1A))
+#define CTRL_Z '\x1A'
 
 #define NOW (uint32_t)millis()
 
@@ -86,6 +86,16 @@ bool Sodaq_3Gbee::startsWith(const char* pre, const char* str)
     return (strncmp(pre, str, strlen(pre)) == 0);
 }
 
+/*!
+ * Read the next response from the modem
+ *
+ * Notice that we're collecting URC's here. And in the process we could
+ * be updating:
+ *     _socketPendingBytes[] if +UUSORD: is seen
+ *     _socketClosedBit[] if +UUSOCL: is seen
+ *     _httpRequestSuccessBit[] if +UUHTTPCR: is seen
+ *     ftpCommandURC[] if +UUFTPCR: is seen
+ */
 ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
         CallbackMethodPtr parserMethod, void* callbackParameter, void* callbackParameter2,
         size_t* outSize, uint32_t timeout)
@@ -113,27 +123,30 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
             // TODO +UUPSDD
             int param1, param2;
             if (sscanf(buffer, "+UUSORD: %d,%d", &param1, &param2) == 2) {
+                uint16_t socket_nr = param1;
+                uint16_t nr_bytes = param2;
                 debugPrint("Unsolicited: Socket ");
-                debugPrint(param1);
+                debugPrint(socket_nr);
                 debugPrint(": ");
                 debugPrint(param2);
                 debugPrintLn("bytes pending");
-                if (static_cast<uint16_t>(param1) < ARRAY_SIZE(_socketPendingBytes)) {
-                    _socketPendingBytes[param1] = param2;
+                if (socket_nr < ARRAY_SIZE(_socketPendingBytes)) {
+                    _socketPendingBytes[socket_nr] = nr_bytes;
                 }
             }
             else if (sscanf(buffer, "+UUSOCL: %d", &param1) == 1) {
-                if (static_cast<uint16_t>(param1) < ARRAY_SIZE(_socketPendingBytes)) {
+                uint16_t socket_nr = param1;
+                if (socket_nr < ARRAY_SIZE(_socketPendingBytes)) {
                     debugPrint("Unsolicited: Socket ");
-                    debugPrint(param1);
+                    debugPrint(socket_nr);
                     debugPrint(": ");
                     debugPrintLn("closed by remote");
 
-                    _socketClosedBit[param1] = true;
+                    _socketClosedBit[socket_nr] = true;
                 }
             }
             else if (sscanf(buffer, "+UUHTTPCR: 0, %d, %d", &param1, &param2) == 2) {
-                int requestType = _httpModemIndexToRequestType(static_cast<uint16_t>(param1));
+                int requestType = _httpModemIndexToRequestType(static_cast<uint8_t>(param1));
                 if (requestType >= 0) {
                     debugPrint("HTTP Result for request type ");
                     debugPrint(requestType);
@@ -146,6 +159,8 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
                     else if (param2 == 1) {
                         _httpRequestSuccessBit[requestType] = TriBoolTrue;
                     }
+                } else {
+                    // Unknown type
                 }
             }
             else if (sscanf(buffer, "+UUFTPCR: %d, %d", &param1, &param2) == 2) {
@@ -182,6 +197,8 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
                 ResponseTypes parserResponse = parserMethod(response, buffer, count, callbackParameter, callbackParameter2);
                 if (parserResponse != ResponseEmpty) {
                     return parserResponse;
+                } else {
+                    // ?
                 }
             }
 
@@ -207,9 +224,9 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
 
 bool Sodaq_3Gbee::setSimPin(const char* simPin)
 {
-    write("AT+CPIN=\"");
-    write(simPin);
-    writeLn("\"");
+    print("AT+CPIN=\"");
+    print(simPin);
+    println("\"");
 
     return (readResponse() == ResponseOK);
 }
@@ -219,7 +236,7 @@ bool Sodaq_3Gbee::isConnected()
 {
     uint8_t value = 0;
 
-    writeLn("AT+UPSND=" DEFAULT_PROFILE ",8");
+    println("AT+UPSND=" DEFAULT_PROFILE ",8");
     if (readResponse<uint8_t, uint8_t>(_upsndParser, &value, NULL) == ResponseOK) {
         return (value == 1);
     }
@@ -243,9 +260,9 @@ bool Sodaq_3Gbee::waitForFtpCommandResult(uint8_t ftpCommandIndex, uint32_t time
 
 bool Sodaq_3Gbee::changeFtpDirectory(const char* directory)
 {
-    write("AT+UFTPC=8,\"");
-    write(directory);
-    writeLn("\"");
+    print("AT+UFTPC=8,\"");
+    print(directory);
+    println("\"");
 
     if ((readResponse() != ResponseOK) || (!waitForFtpCommandResult(8))) {
         return false;
@@ -280,7 +297,7 @@ void Sodaq_3Gbee::cleanupTempFiles()
 // Returns true if the modem replies to "AT" commands without timing out.
 bool Sodaq_3Gbee::isAlive()
 {
-    writeLn(STR_AT);
+    println(STR_AT);
 
     return (readResponse(NULL, 450) == ResponseOK);
 }
@@ -288,25 +305,25 @@ bool Sodaq_3Gbee::isAlive()
 // Sets the apn, apn username and apn password to the modem.
 bool Sodaq_3Gbee::sendAPN(const char* apn, const char* username, const char* password)
 {
-    write("AT+UPSD=" DEFAULT_PROFILE ",1,\"");
-    write(apn);
-    writeLn("\"");
+    print("AT+UPSD=" DEFAULT_PROFILE ",1,\"");
+    print(apn);
+    println("\"");
 
     if (readResponse() != ResponseOK) {
         return false;
     }
 
-    write("AT+UPSD=" DEFAULT_PROFILE ",2,\"");
-    write(username);
-    writeLn("\"");
+    print("AT+UPSD=" DEFAULT_PROFILE ",2,\"");
+    print(username);
+    println("\"");
 
     if (readResponse() != ResponseOK) {
         return false;
     }
 
-    write("AT+UPSD=" DEFAULT_PROFILE ",3,\"");
-    write(password);
-    writeLn("\"");
+    print("AT+UPSD=" DEFAULT_PROFILE ",3,\"");
+    print(password);
+    println("\"");
 
     if (readResponse() != ResponseOK) {
         return false;
@@ -339,7 +356,7 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
     ResponseTypes response = ResponseEmpty;
 
     // echo off
-    writeLn("AT E0");
+    println("AT E0");
     for (uint8_t i = 0; i < 5; i++) {
         response = readResponse();
         if (response == ResponseOK) {
@@ -352,7 +369,7 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
 
     // if supported by target application, change the baudrate
     if (_baudRateChangeCallbackPtr) {
-        writeLn("AT+IPR=" STR(HIGH_BAUDRATE));
+        println("AT+IPR=" STR(HIGH_BAUDRATE));
         if (readResponse() != ResponseOK) {
             return false;
         }
@@ -362,19 +379,19 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
     }
 
     // verbose error messages
-    writeLn("AT+CMEE=2");
+    println("AT+CMEE=2");
     if (readResponse() != ResponseOK) {
         return false;
     }
 
     // Switch sockets to hex mode
-    writeLn("AT+UDCONF=1,1"); // second param is 1=ON, 0=OFF
+    println("AT+UDCONF=1,1"); // second param is 1=ON, 0=OFF
     if (readResponse() != ResponseOK) {
         return false;
     }
 
     // enable network identification LED
-    writeLn("AT+UGPIOC=16,2");
+    println("AT+UGPIOC=16,2");
     if (readResponse() != ResponseOK) {
         return false;
     }
@@ -402,7 +419,7 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
     }
 
     // enable auto network registration
-    writeLn("AT+COPS=0");
+    println("AT+COPS=0");
     if (readResponse(NULL, 400000) != ResponseOK) {
         return false;
     }
@@ -413,7 +430,7 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
     cleanupTempFiles();
 
     // set SMS to text mode
-    writeLn("AT+CMGF=1");
+    println("AT+CMGF=1");
     if (readResponse() != ResponseOK) {
         return false;
     }
@@ -433,7 +450,7 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
     }
 
     // DHCP
-    writeLn("AT+UPSD=" DEFAULT_PROFILE ",7,\"0.0.0.0\"");
+    println("AT+UPSD=" DEFAULT_PROFILE ",7,\"0.0.0.0\"");
     if (readResponse() != ResponseOK) {
         return false;
     }
@@ -443,14 +460,14 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
     for (uint8_t i = NoAuthorization; i < AutoDetectAutorization; i++) {
         if ((authorization == AutoDetectAutorization) || (authorization == i)) {
             // Set Authentication
-            write("AT+UPSD=" DEFAULT_PROFILE ",6,");
-            writeLn(i);
+            print("AT+UPSD=" DEFAULT_PROFILE ",6,");
+            println(i);
             if (readResponse() != ResponseOK) {
                 return false;
             }
 
             // connect using default profile
-            writeLn("AT+UPSDA=" DEFAULT_PROFILE ",3");
+            println("AT+UPSDA=" DEFAULT_PROFILE ",3");
             if (readResponse(NULL, 200000) == ResponseOK) {
                 return true;
             }
@@ -464,7 +481,7 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
 bool Sodaq_3Gbee::disconnect()
 {
     // TODO also turn off the modem?
-    writeLn("AT+UPSDA=" DEFAULT_PROFILE ",4");
+    println("AT+UPSDA=" DEFAULT_PROFILE ",4");
 
     return (readResponse(NULL, 40000) == ResponseOK);
 }
@@ -486,7 +503,7 @@ ResponseTypes Sodaq_3Gbee::_cregParser(ResponseTypes& response, const char* buff
 // Returns the current status of the network.
 NetworkRegistrationStatuses Sodaq_3Gbee::getNetworkStatus()
 {
-    writeLn("AT+CREG?"); // TODO ? +CGREG
+    println("AT+CREG?"); // TODO ? +CGREG
 
     int networkStatus;
     if (readResponse<int, uint8_t>(_cregParser, &networkStatus, NULL) == ResponseOK) {
@@ -506,7 +523,7 @@ NetworkRegistrationStatuses Sodaq_3Gbee::getNetworkStatus()
 // Returns the network technology the modem is currently registered to.
 NetworkTechnologies Sodaq_3Gbee::getNetworkTechnology()
 {
-    writeLn("AT+COPS?");
+    println("AT+COPS?");
 
     int networkTechnology;
     if (readResponse<int, uint8_t>(_copsParser, &networkTechnology, NULL) == ResponseOK) {
@@ -545,14 +562,14 @@ bool Sodaq_3Gbee::getRSSIAndBER(int8_t* rssi, uint8_t* ber)
 {
     static char berValues[] = { 49, 43, 37, 25, 19, 13, 7, 0 }; // 3GPP TS 45.008 [20] subclause 8.2.4
     
-    writeLn("AT+CSQ");
+    println("AT+CSQ");
 
     int rssiRaw = 0;
     int berRaw = 0;
 
     if (readResponse<int, int>(_csqParser, &rssiRaw, &berRaw) == ResponseOK) {
         *rssi = ((rssiRaw == 99) ? 0 : -113 + 2 * rssiRaw);
-        *ber = ((berRaw == 99 || static_cast<unsigned>(berRaw) >= sizeof(berValues)) ? 0 : berValues[berRaw]);
+        *ber = ((berRaw == 99 || static_cast<size_t>(berRaw) >= sizeof(berValues)) ? 0 : berValues[berRaw]);
         
         return true;
     }
@@ -597,7 +614,7 @@ bool Sodaq_3Gbee::getOperatorName(char* buffer, size_t size)
         buffer[0] = 0;
     }
 
-    writeLn("AT+COPS?");
+    println("AT+COPS?");
 
     return (readResponse<char, size_t>(_copsParser, buffer, &size) == ResponseOK);
 }
@@ -631,7 +648,7 @@ bool Sodaq_3Gbee::getMobileDirectoryNumber(char* buffer, size_t size)
         buffer[0] = 0;
     }
 
-    writeLn("AT+CNUM");
+    println("AT+CNUM");
 
     return (readResponse<char, size_t>(_cnumParser, buffer, &size) == ResponseOK);
 }
@@ -667,7 +684,7 @@ bool Sodaq_3Gbee::getIMEI(char* buffer, size_t size)
         buffer[0] = 0;
     }
 
-    writeLn("AT+CGSN");
+    println("AT+CGSN");
 
     return (readResponse<char, size_t>(_nakedStringParser, buffer, &size) == ResponseOK);
 }
@@ -700,7 +717,7 @@ bool Sodaq_3Gbee::getCCID(char* buffer, size_t size)
         buffer[0] = 0;
     }
 
-    writeLn("AT+CCID");
+    println("AT+CCID");
 
     return (readResponse<char, size_t>(_ccidParser, buffer, &size) == ResponseOK);
 }
@@ -718,7 +735,7 @@ bool Sodaq_3Gbee::getIMSI(char* buffer, size_t size)
         buffer[0] = 0;
     }
 
-    writeLn("AT+CIMI");
+    println("AT+CIMI");
 
     return (readResponse<char, size_t>(_nakedStringParser, buffer, &size) == ResponseOK);
 }
@@ -750,7 +767,7 @@ SimStatuses Sodaq_3Gbee::getSimStatus()
 {
     SimStatuses simStatus;
 
-    writeLn("AT+CPIN?");
+    println("AT+CPIN?");
     if (readResponse<SimStatuses, uint8_t>(_cpinParser, &simStatus, NULL) == ResponseOK) {
         return simStatus;
     }
@@ -763,7 +780,7 @@ IP_t Sodaq_3Gbee::getLocalIP()
 {
     IP_t ip = NO_IP_ADDRESS;
 
-    writeLn("AT+UPSND=" DEFAULT_PROFILE ",0");
+    println("AT+UPSND=" DEFAULT_PROFILE ",0");
     if (readResponse<IP_t, uint8_t>(_upsndParser, &ip, NULL) == ResponseOK) {
         return ip;
     }
@@ -848,9 +865,9 @@ IP_t Sodaq_3Gbee::getHostIP(const char* host)
 {
     IP_t ip = NO_IP_ADDRESS;
 
-    write("AT+UDNSRN=0,\"");
-    write(host);
-    writeLn("\"");
+    print("AT+UDNSRN=0,\"");
+    print(host);
+    println("\"");
     if (readResponse<IP_t, uint8_t>(_udnsrnParser, &ip, NULL, NULL, 70000) == ResponseOK) {
         return ip;
     }
@@ -873,14 +890,14 @@ int Sodaq_3Gbee::createSocket(Protocols protocol, uint16_t localPort)
         return SOCKET_FAIL;
     }
 
-    write("AT+USOCR=");
+    print("AT+USOCR=");
     if (localPort > 0) {
-        write(protocolIndex);
-        write(",");
-        writeLn(static_cast<uint32_t>(localPort));
+        print(protocolIndex);
+        print(",");
+        println(localPort);
     }
     else {
-        writeLn(protocolIndex);
+        println(protocolIndex);
     }
 
     uint8_t socket;
@@ -973,12 +990,12 @@ bool Sodaq_3Gbee::connectSocket(uint8_t socket, const char* host, uint16_t port)
     }
 
     _socketClosedBit[socket] = false;
-    write("AT+USOCO=");
-    write(socket);
-    write(",\"");
-    write(usePassedHost ? host : ipBuffer);
-    write("\",");
-    writeLn(static_cast<uint32_t>(port));
+    print("AT+USOCO=");
+    print(socket);
+    print(",\"");
+    print(usePassedHost ? host : ipBuffer);
+    print("\",");
+    println(port);
 
     return (readResponse(NULL, 30000) == ResponseOK);
 }
@@ -993,18 +1010,18 @@ bool Sodaq_3Gbee::socketSend(uint8_t socket, const uint8_t* buffer, size_t size)
 
     // TODO +USOCTL=1 check last error, (11: queue full)
 
-    write("AT+USOWR=");
-    write(socket);
-    write(",");
-    write(static_cast<uint32_t>(size));
-    write(",\"");
+    print("AT+USOWR=");
+    print(socket);
+    print(",");
+    print(size);
+    print(",\"");
     for (size_t i = 0; i < size; ++i) {
-        write(static_cast<char>(NIBBLE_TO_HEX_CHAR(HIGH_NIBBLE(buffer[i]))));
-        write(static_cast<char>(NIBBLE_TO_HEX_CHAR(LOW_NIBBLE(buffer[i]))));
+        print(static_cast<char>(NIBBLE_TO_HEX_CHAR(HIGH_NIBBLE(buffer[i]))));
+        print(static_cast<char>(NIBBLE_TO_HEX_CHAR(LOW_NIBBLE(buffer[i]))));
         // TODO segment and check queue full?
     }
 
-    writeLn("\"");
+    println("\"");
 
     return (readResponse(NULL, 10000) == ResponseOK);
 }
@@ -1057,10 +1074,10 @@ size_t Sodaq_3Gbee::socketReceive(uint8_t socket, uint8_t* buffer, size_t size)
         count = MAX_SOCKET_BUFFER/2;
     }
 
-    write("AT+USORD=");
-    write(socket);
-    write(",");
-    writeLn(static_cast<uint32_t>(count));
+    print("AT+USORD=");
+    print(socket);
+    print(",");
+    println(count);
 
     char resultBuffer[MAX_SOCKET_BUFFER];
     if (readResponse<char, uint8_t>(_usordParser, resultBuffer, NULL) == ResponseOK) {
@@ -1088,8 +1105,8 @@ size_t Sodaq_3Gbee::socketReceive(uint8_t socket, uint8_t* buffer, size_t size)
 // Returns true if successful.
 bool Sodaq_3Gbee::closeSocket(uint8_t socket)
 {
-    write("AT+USOCL=");
-    writeLn(socket);
+    print("AT+USOCL=");
+    println(socket);
 
     return (readResponse(NULL, 20000) == ResponseOK);
 }
@@ -1180,7 +1197,7 @@ size_t Sodaq_3Gbee::httpRequest(const char* url, uint16_t port,
     // TODO maybe return error <0 ?
 
     // reset http profile 0
-    writeLn("AT+UHTTP=0");
+    println("AT+UHTTP=0");
     if (readResponse() != ResponseOK) {
         return 0;
     }
@@ -1193,18 +1210,18 @@ size_t Sodaq_3Gbee::httpRequest(const char* url, uint16_t port,
     }
 
     // set server domain
-    write("AT+UHTTP=0,");
-    write(isValidIPv4(url) ? "0,\"" : "1,\"");
-    write(url);
-    writeLn("\"");
+    print("AT+UHTTP=0,");
+    print(isValidIPv4(url) ? "0,\"" : "1,\"");
+    print(url);
+    println("\"");
     if (readResponse() != ResponseOK) {
         return 0;
     }
 
     // set port
     if (port != 80) {
-        write("AT+UHTTP=0,5,");
-        writeLn(static_cast<uint32_t>(port));
+        print("AT+UHTTP=0,5,");
+        println(port);
 
         if (readResponse() != ResponseOK) {
             return 0;
@@ -1230,22 +1247,22 @@ size_t Sodaq_3Gbee::httpRequest(const char* url, uint16_t port,
     // reset the success bit before calling a new request
     _httpRequestSuccessBit[requestType] = TriBoolUndefined;
 
-    write("AT+UHTTPC=0,");
-    write(static_cast<uint8_t>(_httpRequestTypeToModemIndex(requestType)));
-    write(",\"");
-    write(endpoint);
-    write("\",\"\""); // empty filename = default = "http_last_response_0" (DEFAULT_HTTP_RECEIVE_TMP_FILENAME)
+    print("AT+UHTTPC=0,");
+    print(_httpRequestTypeToModemIndex(requestType));
+    print(",\"");
+    print(endpoint);
+    print("\",\"\""); // empty filename = default = "http_last_response_0" (DEFAULT_HTTP_RECEIVE_TMP_FILENAME)
 
     // NOTE: a file that includes the buffer to send has been created already
     if (requestType == PUT) {
-        writeLn(",\"" DEFAULT_HTTP_SEND_TMP_FILENAME "\""); // param1: file from filesystem to send
+        println(",\"" DEFAULT_HTTP_SEND_TMP_FILENAME "\""); // param1: file from filesystem to send
     }
     else if (requestType == POST) {
-        write(",\"" DEFAULT_HTTP_SEND_TMP_FILENAME "\""); // param1: file from filesystem to send
-        writeLn(",1"); // param2: content type, 1=text/plain
+        print(",\"" DEFAULT_HTTP_SEND_TMP_FILENAME "\""); // param1: file from filesystem to send
+        println(",1"); // param2: content type, 1=text/plain
         // TODO consider making the content type a parameter
     } else {
-        writeLn("");
+        println("");
     }
 
     if (readResponse() != ResponseOK) {
@@ -1253,6 +1270,7 @@ size_t Sodaq_3Gbee::httpRequest(const char* url, uint16_t port,
     }
 
     // check for success while checking URCs
+    // This loop relies on readResponse being called via isAlive()
     uint32_t start = millis();
     while ((_httpRequestSuccessBit[requestType] == TriBoolUndefined) && !is_timedout(start, 30000)) {
         isAlive();
@@ -1265,7 +1283,7 @@ size_t Sodaq_3Gbee::httpRequest(const char* url, uint16_t port,
         }
     }
     else if (_httpRequestSuccessBit[requestType] == TriBoolFalse) {
-        debugPrintLn(DEBUG_STR_ERROR "An error occured with the http request!");
+        debugPrintLn(DEBUG_STR_ERROR "An error occurred with the http request!");
         return 0;
     }
     else {
@@ -1291,28 +1309,28 @@ ResponseTypes Sodaq_3Gbee::_ulstfileParser(ResponseTypes& response, const char* 
 }
 
 // maps the given requestType to the index the modem recognizes, -1 if error
-int8_t Sodaq_3Gbee::_httpRequestTypeToModemIndex(HttpRequestTypes requestType)
+int Sodaq_3Gbee::_httpRequestTypeToModemIndex(HttpRequestTypes requestType)
 {
     static uint8_t mapping[] = {
-        4, // POST (0)
-        1, // GET (1)
-        0, // HEAD (2)
-        2, // DELETE (3)
-        3, // PUT (4)
+        4,      // 0 POST
+        1,      // 1 GET
+        0,      // 2 HEAD
+        2,      // 3 DELETE
+        3,      // 4 PUT
     };
 
     return (requestType < sizeof(mapping)) ? mapping[requestType] : -1;
 }
 
 // HttpRequestTypes if successful, -1 if not
-int8_t Sodaq_3Gbee::_httpModemIndexToRequestType(uint8_t modemIndex)
+int Sodaq_3Gbee::_httpModemIndexToRequestType(uint8_t modemIndex)
 {
     static uint8_t mapping[] = {
-        HEAD,
-        GET,
-        DELETE,
-        PUT,
-        POST,
+        HEAD,   // 0
+        GET,    // 1
+        DELETE, // 2
+        PUT,    // 3
+        POST,   // 4
     };
 
     return (modemIndex < sizeof(mapping)) ? mapping[modemIndex] : -1;
@@ -1329,9 +1347,9 @@ size_t Sodaq_3Gbee::readFile(const char* filename, uint8_t* buffer, size_t size)
     }
     
     // first, make sure the buffer is sufficient
-    write("AT+ULSTFILE=2,\"");
-    write(filename);
-    writeLn("\"");
+    print("AT+ULSTFILE=2,\"");
+    print(filename);
+    println("\"");
 
     uint32_t filesize = 0;
 
@@ -1341,9 +1359,9 @@ size_t Sodaq_3Gbee::readFile(const char* filename, uint8_t* buffer, size_t size)
         return 0;
     }
 
-    write("AT+URDFILE=\"");
-    write(filename);
-    writeLn("\"");
+    print("AT+URDFILE=\"");
+    print(filename);
+    println("\"");
 
     // override normal parsing process and explicitly read characters here 
     // to be able to also read terminator characters within files
@@ -1410,14 +1428,14 @@ error:
 bool Sodaq_3Gbee::writeFile(const char* filename, const uint8_t* buffer, size_t size)
 {
     // TODO escape filename characters
-    write("AT+UDWNFILE=\"");
-    write(filename);
-    write("\",");
-    writeLn(static_cast<uint32_t>(size));
+    print("AT+UDWNFILE=\"");
+    print(filename);
+    print("\",");
+    println(size);
 
     if (readResponse() == ResponsePrompt) {
         for (size_t i = 0; i < size; i++) {
-            write(buffer[i]);
+            print(buffer[i]);
         }
 
         return (readResponse() == ResponseOK);
@@ -1429,9 +1447,9 @@ bool Sodaq_3Gbee::writeFile(const char* filename, const uint8_t* buffer, size_t 
 bool Sodaq_3Gbee::deleteFile(const char* filename)
 {
     // TODO escape filename characters
-    write("AT+UDELFILE=\"");
-    write(filename);
-    writeLn("\"");
+    print("AT+UDELFILE=\"");
+    print(filename);
+    println("\"");
 
     return (readResponse() == ResponseOK);
 }
@@ -1442,43 +1460,43 @@ bool Sodaq_3Gbee::openFtpConnection(const char* server, const char* username, co
     ftpDirectoryChangeCounter = 0;
 
     // set server
-    write("AT+UFTP=");
-    write(isValidIPv4(server) ? "0,\"" : "1,\"");
-    write(server);
-    writeLn("\"");
+    print("AT+UFTP=");
+    print(isValidIPv4(server) ? "0,\"" : "1,\"");
+    print(server);
+    println("\"");
     
     if (readResponse() != ResponseOK) {
         return false;
     }
 
     // set username
-    write("AT+UFTP=2,\"");
-    write(username);
-    writeLn("\"");
+    print("AT+UFTP=2,\"");
+    print(username);
+    println("\"");
 
     if (readResponse() != ResponseOK) {
         return false;
     }
 
     // set password
-    write("AT+UFTP=3,\"");
-    write(password);
-    writeLn("\"");
+    print("AT+UFTP=3,\"");
+    print(password);
+    println("\"");
 
     if (readResponse() != ResponseOK) {
         return false;
     }
 
     // set passive / active
-    write("AT+UFTP=6,");
-    writeLn(static_cast<uint8_t>(ftpMode == ActiveMode ? 0 : 1));
+    print("AT+UFTP=6,");
+    println(ftpMode == ActiveMode ? 0 : 1);
 
     if (readResponse() != ResponseOK) {
         return false;
     }
 
     // connect
-    writeLn("AT+UFTPC=1");
+    println("AT+UFTPC=1");
 
     if ((readResponse() != ResponseOK) || (!waitForFtpCommandResult(1))) {
         return false;
@@ -1492,7 +1510,7 @@ bool Sodaq_3Gbee::closeFtpConnection()
 {
     ftpDirectoryChangeCounter = 0;
 
-    writeLn("AT+UFTPC=0");
+    println("AT+UFTPC=0");
 
     if ((readResponse() != ResponseOK) || (!waitForFtpCommandResult(0))) {
         return false;
@@ -1554,9 +1572,9 @@ bool Sodaq_3Gbee::ftpSend(const uint8_t* buffer, size_t size)
         return false;
     }
 
-    write("AT+UFTPC=5,\"" DEFAULT_FTP_TMP_FILENAME "\",\"");
-    write(ftpFilename);
-    writeLn("\"");
+    print("AT+UFTPC=5,\"" DEFAULT_FTP_TMP_FILENAME "\",\"");
+    print(ftpFilename);
+    println("\"");
 
     if ((readResponse() != ResponseOK) || (!waitForFtpCommandResult(5))) {
         return false;
@@ -1577,9 +1595,9 @@ int Sodaq_3Gbee::ftpReceive(char* buffer, size_t size)
 
     deleteFile(DEFAULT_FTP_TMP_FILENAME); // cleanup
 
-    write("AT+UFTPC=4,\"");
-    write(ftpFilename);
-    writeLn("\",\"" DEFAULT_FTP_TMP_FILENAME "\"");
+    print("AT+UFTPC=4,\"");
+    print(ftpFilename);
+    println("\",\"" DEFAULT_FTP_TMP_FILENAME "\"");
 
     if ((readResponse() != ResponseOK) || (!waitForFtpCommandResult(4))) {
         return 0;
@@ -1621,9 +1639,9 @@ ResponseTypes Sodaq_3Gbee::_cmglParser(ResponseTypes& response, const char* buff
 // Returns the number of indexes written to the list or -1 in case of error.
 int Sodaq_3Gbee::getSmsList(const char* statusFilter, int* indexList, size_t size)
 {
-    write("AT+CMGL=\"");
-    write(statusFilter);
-    writeLn("\"");
+    print("AT+CMGL=\"");
+    print(statusFilter);
+    println("\"");
 
     size_t sizeParam = size;
     if (readResponse<int, size_t>(_cmglParser, indexList, &sizeParam) == ResponseOK) {
@@ -1658,8 +1676,8 @@ ResponseTypes Sodaq_3Gbee::_cmgrParser(ResponseTypes& response, const char* buff
 // Returns true if successful.
 bool Sodaq_3Gbee::readSms(uint8_t index, char* phoneNumber, char* buffer, size_t size)
 {
-    write("AT+CMGR=");
-    writeLn(index);
+    print("AT+CMGR=");
+    println(index);
 
     return (readResponse<char, char>(_cmgrParser, phoneNumber, buffer) == ResponseOK);
 }
@@ -1668,8 +1686,8 @@ bool Sodaq_3Gbee::readSms(uint8_t index, char* phoneNumber, char* buffer, size_t
 // Deletes the SMS at the given index.
 bool Sodaq_3Gbee::deleteSms(uint8_t index)
 {
-    write("AT+CMGD=");
-    writeLn(index);
+    print("AT+CMGD=");
+    println(index);
 
     return (readResponse() == ResponseOK);
 }
@@ -1680,16 +1698,16 @@ bool Sodaq_3Gbee::deleteSms(uint8_t index)
 // Returns true if successful.
 bool Sodaq_3Gbee::sendSms(const char* phoneNumber, const char* buffer)
 {
-    write("AT+CMGS=\"");
-    write(phoneNumber);
-    writeLn("\"");
+    print("AT+CMGS=\"");
+    print(phoneNumber);
+    println("\"");
 
     if (readResponse() == ResponsePrompt) {
         for (size_t i = 0; i < strlen(buffer); i++) {
-            write(buffer[i]);
+            print(buffer[i]);
         }
 
-        write(CTRL_Z);
+        print(CTRL_Z);
 
         return (readResponse() == ResponseOK);
     }

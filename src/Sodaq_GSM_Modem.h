@@ -396,26 +396,36 @@ protected:
     // Returns the number of bytes read.
     size_t readLn() { return readLn(_inputBuffer, _inputBufferSize); };
 
-    // Methods to write to the modem stream
-    size_t write(const char* buffer);
+    // Write a byte
     size_t writeByte(uint8_t value);
-    size_t write(uint8_t value);
-    size_t write(uint32_t value);
-    size_t write(int value);
-    size_t write(char value);
-
-    // Methods to write to the modem stream with terminator
-    size_t writeLn(const char* buffer);
-    size_t writeLn(uint8_t value);
-    size_t writeLn(uint32_t value);
-    size_t writeLn(int value);
-    size_t writeLn(char value);
-
-    // Write the command terminator
-    size_t writeLn();
 
     // Write the command prolog (just for debugging
     void writeProlog();
+
+    size_t print(const __FlashStringHelper *);
+    size_t print(const String &);
+    size_t print(const char[]);
+    size_t print(char);
+    size_t print(unsigned char, int = DEC);
+    size_t print(int, int = DEC);
+    size_t print(unsigned int, int = DEC);
+    size_t print(long, int = DEC);
+    size_t print(unsigned long, int = DEC);
+    size_t print(double, int = 2);
+    size_t print(const Printable&);
+
+    size_t println(const __FlashStringHelper *);
+    size_t println(const String &s);
+    size_t println(const char[]);
+    size_t println(char);
+    size_t println(unsigned char, int = DEC);
+    size_t println(int, int = DEC);
+    size_t println(unsigned int, int = DEC);
+    size_t println(long, int = DEC);
+    size_t println(unsigned long, int = DEC);
+    size_t println(double, int = 2);
+    size_t println(const Printable&);
+    size_t println(void);
 
     virtual ResponseTypes readResponse(char* buffer, size_t size, size_t* outSize, uint32_t timeout = DEFAULT_READ_MS) = 0;
 };

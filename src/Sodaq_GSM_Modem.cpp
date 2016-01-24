@@ -122,46 +122,29 @@ void Sodaq_GSM_Modem::writeProlog()
     }
 }
 
-// TODO is the result really needed?
-size_t Sodaq_GSM_Modem::write(const char* buffer)
-{
-    writeProlog();
-    debugPrint(buffer);
-    
-    return _modemStream->print(buffer);
-}
-
 // Write a byte, as binary data
 size_t Sodaq_GSM_Modem::writeByte(uint8_t value)
 {
     return _modemStream->write(value);
 }
 
-size_t Sodaq_GSM_Modem::write(uint8_t value)
+size_t Sodaq_GSM_Modem::print(const String& buffer)
 {
     writeProlog();
-    debugPrint(value);
+    debugPrint(buffer);
 
-    return _modemStream->print(value);
+    return _modemStream->print(buffer);
 }
 
-size_t Sodaq_GSM_Modem::write(uint32_t value)
+size_t Sodaq_GSM_Modem::print(const char buffer[])
 {
     writeProlog();
-    debugPrint(value);
+    debugPrint(buffer);
 
-    return _modemStream->print(value);
+    return _modemStream->print(buffer);
 }
 
-size_t Sodaq_GSM_Modem::write(char value)
-{
-    writeProlog();
-    debugPrint(value);
-
-    return _modemStream->print(value);
-};
-
-size_t Sodaq_GSM_Modem::write(int value)
+size_t Sodaq_GSM_Modem::print(char value)
 {
     writeProlog();
     debugPrint(value);
@@ -169,41 +152,122 @@ size_t Sodaq_GSM_Modem::write(int value)
     return _modemStream->print(value);
 };
 
-// TODO is the result really needed?
-size_t Sodaq_GSM_Modem::writeLn(const char* buffer)
+size_t Sodaq_GSM_Modem::print(unsigned char value, int base)
 {
-    size_t i = write(buffer);
-    return i + writeLn();
+    writeProlog();
+    debugPrint(value, base);
+
+    return _modemStream->print(value, base);
+};
+
+size_t Sodaq_GSM_Modem::print(int value, int base)
+{
+    writeProlog();
+    debugPrint(value, base);
+
+    return _modemStream->print(value, base);
+};
+
+size_t Sodaq_GSM_Modem::print(unsigned int value, int base)
+{
+    writeProlog();
+    debugPrint(value, base);
+
+    return _modemStream->print(value, base);
+};
+
+size_t Sodaq_GSM_Modem::print(long value, int base)
+{
+    writeProlog();
+    debugPrint(value, base);
+
+    return _modemStream->print(value, base);
+};
+
+size_t Sodaq_GSM_Modem::print(unsigned long value, int base)
+{
+    writeProlog();
+    debugPrint(value, base);
+
+    return _modemStream->print(value, base);
+};
+
+size_t Sodaq_GSM_Modem::println(const __FlashStringHelper *ifsh)
+{
+    size_t n = print(ifsh);
+    n += println();
+    return n;
 }
 
-size_t Sodaq_GSM_Modem::writeLn(uint8_t value)
+size_t Sodaq_GSM_Modem::println(const String &s)
 {
-    size_t i = write(value);
-    return i + writeLn();
+    size_t n = print(s);
+    n += println();
+    return n;
 }
 
-size_t Sodaq_GSM_Modem::writeLn(uint32_t value)
+size_t Sodaq_GSM_Modem::println(const char c[])
 {
-    size_t i = write(value);
-    return i + writeLn();
+    size_t n = print(c);
+    n += println();
+    return n;
 }
 
-size_t Sodaq_GSM_Modem::writeLn(char value)
+size_t Sodaq_GSM_Modem::println(char c)
 {
-    size_t i = write(value);
-    return i + writeLn();
+    size_t n = print(c);
+    n += println();
+    return n;
 }
 
-size_t Sodaq_GSM_Modem::writeLn(int value)
+size_t Sodaq_GSM_Modem::println(unsigned char b, int base)
 {
-    size_t i = write(value);
-    return i + writeLn();
+    size_t i = print(b, base);
+    return i + println();
 }
 
-size_t Sodaq_GSM_Modem::writeLn()
+size_t Sodaq_GSM_Modem::println(int num, int base)
+{
+    size_t i = print(num, base);
+    return i + println();
+}
+
+size_t Sodaq_GSM_Modem::println(unsigned int num, int base)
+{
+    size_t i = print(num, base);
+    return i + println();
+}
+
+size_t Sodaq_GSM_Modem::println(long num, int base)
+{
+    size_t i = print(num, base);
+    return i + println();
+}
+
+size_t Sodaq_GSM_Modem::println(unsigned long num, int base)
+{
+    size_t i = print(num, base);
+    return i + println();
+}
+
+size_t Sodaq_GSM_Modem::println(double num, int digits)
+{
+    writeProlog();
+    debugPrint(num, digits);
+
+    return _modemStream->println(num, digits);
+}
+
+size_t Sodaq_GSM_Modem::println(const Printable& x)
+{
+    size_t i = print(x);
+    return i + println();
+}
+
+size_t Sodaq_GSM_Modem::println(void)
 {
     debugPrintLn();
-    size_t i = write('\r');
+    size_t i = print('\r');
     _appendCommand = false;
     return i;
 }
