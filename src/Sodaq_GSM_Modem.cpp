@@ -158,6 +158,14 @@ size_t Sodaq_GSM_Modem::write(char value)
     return _modemStream->print(value);
 };
 
+size_t Sodaq_GSM_Modem::write(int value)
+{
+    writeProlog();
+    debugPrint(value);
+
+    return _modemStream->print(value);
+};
+
 // TODO is the result really needed?
 size_t Sodaq_GSM_Modem::writeLn(const char* buffer)
 {
@@ -178,6 +186,12 @@ size_t Sodaq_GSM_Modem::writeLn(uint32_t value)
 }
 
 size_t Sodaq_GSM_Modem::writeLn(char value)
+{
+    size_t i = write(value);
+    return i + writeLn();
+}
+
+size_t Sodaq_GSM_Modem::writeLn(int value)
 {
     size_t i = write(value);
     return i + writeLn();

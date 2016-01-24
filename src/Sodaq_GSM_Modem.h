@@ -407,12 +407,14 @@ protected:
     size_t writeByte(uint8_t value);
     size_t write(uint8_t value);
     size_t write(uint32_t value);
+    size_t write(int value);
     size_t write(char value);
 
     // Methods to write to the modem stream with terminator
     size_t writeLn(const char* buffer);
     size_t writeLn(uint8_t value);
     size_t writeLn(uint32_t value);
+    size_t writeLn(int value);
     size_t writeLn(char value);
 
     // Write the command terminator
