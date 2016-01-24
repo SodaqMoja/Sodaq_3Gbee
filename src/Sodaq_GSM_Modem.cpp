@@ -57,7 +57,11 @@ Sodaq_GSM_Modem::Sodaq_GSM_Modem() :
     _apnUser(0),
     _apnPass(0),
     _onoff(0),
-    _baudRateChangeCallbackPtr(0)
+    _baudRateChangeCallbackPtr(0),
+    _appendCommand(false),
+    _lastCSQ(0),
+    _CSQtime(0),
+    _minSignalQuality(10)
 {
     this->_isBufferInitialized = false;
 }
