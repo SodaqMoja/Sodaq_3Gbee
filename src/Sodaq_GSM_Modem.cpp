@@ -56,7 +56,6 @@ Sodaq_GSM_Modem::Sodaq_GSM_Modem() :
     _apn(0),
     _apnUser(0),
     _apnPass(0),
-    _timeout(DEFAULT_TIMEOUT),
     _onoff(0),
     _baudRateChangeCallbackPtr(0)
 {
@@ -247,18 +246,18 @@ void Sodaq_GSM_Modem::setApnPass(const char * pass)
 }
 
 // Returns a character from the modem stream if read within _timeout ms or -1 otherwise.
-int Sodaq_GSM_Modem::timedRead() const
+int Sodaq_GSM_Modem::timedRead(uint32_t timeout) const
 {
     int c;
     uint32_t _startMillis = millis();
-    
+
     do {
         c = _modemStream->read();
         if (c >= 0) {
             return c;
         }
-    } while (millis() - _startMillis < _timeout);
-    
+    } while (millis() - _startMillis < timeout);
+
     return -1; // -1 indicates timeout
 }
 
@@ -267,7 +266,7 @@ int Sodaq_GSM_Modem::timedRead() const
 // times out (whichever happens first).
 // The buffer does not contain the "terminator" character or a null terminator explicitly.
 // Returns the number of characters written to the buffer, not including null terminator.
-size_t Sodaq_GSM_Modem::readBytesUntil(char terminator, char* buffer, size_t length)
+size_t Sodaq_GSM_Modem::readBytesUntil(char terminator, char* buffer, size_t length, uint32_t timeout)
 {
     if (length < 1) {
         return 0;
@@ -276,7 +275,7 @@ size_t Sodaq_GSM_Modem::readBytesUntil(char terminator, char* buffer, size_t len
     size_t index = 0;
 
     while (index < length) {
-        int c = timedRead();
+        int c = timedRead(timeout);
 
         if (c < 0 || c == terminator) {
             break;
@@ -292,14 +291,14 @@ size_t Sodaq_GSM_Modem::readBytesUntil(char terminator, char* buffer, size_t len
 }
 
 // Fills the given "buffer" with up to "length" characters read from the modem stream.
-// It stops when a character read timesout or "length" characters have been read.
+// It stops when a character read times out or "length" characters have been read.
 // Returns the number of characters written to the buffer.
-size_t Sodaq_GSM_Modem::readBytes(uint8_t* buffer, size_t length)
+size_t Sodaq_GSM_Modem::readBytes(uint8_t* buffer, size_t length, uint32_t timeout)
 {
     size_t count = 0;
 
     while (count < length) {
-        int c = timedRead();
+        int c = timedRead(timeout);
 
         if (c < 0) {
             break;
@@ -317,10 +316,9 @@ size_t Sodaq_GSM_Modem::readBytes(uint8_t* buffer, size_t length)
 // Reads a line (up to the SODAQ_GSM_TERMINATOR) from the modem stream into the "buffer".
 // The buffer is terminated with null.
 // Returns the number of bytes read, not including the null terminator.
-size_t Sodaq_GSM_Modem::readLn(char* buffer, size_t size, long timeout)
+size_t Sodaq_GSM_Modem::readLn(char* buffer, size_t size, uint32_t timeout)
 {
-    _timeout = timeout;
-    size_t len = readBytesUntil(SODAQ_GSM_TERMINATOR[SODAQ_GSM_TERMINATOR_LEN - 1], buffer, size);
+    size_t len = readBytesUntil(SODAQ_GSM_TERMINATOR[SODAQ_GSM_TERMINATOR_LEN - 1], buffer, size, timeout);
 
     // check if the terminator is more than 1 characters, then check if the first character of it exists 
     // in the calculated position and terminate the string there
