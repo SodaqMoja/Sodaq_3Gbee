@@ -253,6 +253,9 @@ private:
     static bool isValidIPv4(const char* str);
     bool setSimPin(const char* simPin);
 
+    bool setBinaryMode();
+    bool setHexMode();
+
     // returns true if URC returns 1, false in case URC returns 0 or in case of timeout
     bool waitForFtpCommandResult(uint8_t ftpCommandIndex, uint32_t timeout=10000);
     bool changeFtpDirectory(const char* directory);

@@ -234,6 +234,20 @@ bool Sodaq_3Gbee::setSimPin(const char* simPin)
     return (readResponse() == ResponseOK);
 }
 
+bool Sodaq_3Gbee::setBinaryMode()
+{
+    println("AT+UDCONF=1,0");
+
+    return (readResponse() == ResponseOK);
+}
+
+bool Sodaq_3Gbee::setHexMode()
+{
+    println("AT+UDCONF=1,1");
+
+    return (readResponse() == ResponseOK);
+}
+
 // Returns true if the modem is connected to the network and has an activated data connection.
 bool Sodaq_3Gbee::isConnected()
 {
@@ -400,9 +414,8 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
         return false;
     }
 
-    // Switch sockets to hex mode
-    println("AT+UDCONF=1,1"); // second param is 1=ON, 0=OFF
-    if (readResponse() != ResponseOK) {
+    // Switch to hex. Somehow this is also needed for AT+COPS=0
+    if (!setHexMode()) {
         return false;
     }
 
@@ -1020,7 +1033,7 @@ bool Sodaq_3Gbee::connectSocket(uint8_t socket, const char* host, uint16_t port)
 // Returns true if successful.
 bool Sodaq_3Gbee::socketSend(uint8_t socket, const uint8_t* buffer, size_t size)
 {
-    // TODO see if we should keep an array of sockets so that the UDP-specific 
+    // TODO see if we should keep an array of sockets so that the UDP-specific
     // commands can be used instead, without first initializing the UDP socket
     // OR maybe query the socket type? AT+USOCTL=0,0  => +USOCTL:0,0,6 (socket #0 is TCP)
 
@@ -1029,15 +1042,17 @@ bool Sodaq_3Gbee::socketSend(uint8_t socket, const uint8_t* buffer, size_t size)
     print("AT+USOWR=");
     print(socket);
     print(",");
-    print(size);
-    print(",\"");
-    for (size_t i = 0; i < size; ++i) {
-        print(static_cast<char>(NIBBLE_TO_HEX_CHAR(HIGH_NIBBLE(buffer[i]))));
-        print(static_cast<char>(NIBBLE_TO_HEX_CHAR(LOW_NIBBLE(buffer[i]))));
-        // TODO segment and check queue full?
-    }
+    println(size);
 
-    println("\"");
+    // Wait for prompt. See writeFile
+    if (readResponse() == ResponsePrompt) {
+        // After the @ prompt reception, wait for a minimum of 50 ms before sending data.
+        delay(51);
+
+        for (size_t i = 0; i < size; ++i) {
+            writeByte(buffer[i]);
+        }
+    }
 
     return (readResponse(NULL, 10000) == ResponseOK);
 }
