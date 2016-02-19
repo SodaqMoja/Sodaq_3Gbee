@@ -35,6 +35,7 @@ public:
 
     // Initializes the modem instance. Sets the modem stream and the on-off power pins.
     void init(Stream& stream, int8_t vcc33Pin, int8_t onoffPin, int8_t statusPin);
+    void init_wdt(Stream& stream, int8_t onoffPin);
 
     // Turns on and initializes the modem, then connects to the network and activates the data connection.
     bool connect(const char* simPin, const char* apn, const char* username, const char* password,

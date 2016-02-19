@@ -58,11 +58,13 @@ static inline bool is_timedout(uint32_t from, uint32_t nr_ms)
 // A specialized class to switch on/off the 3Gbee module
 // The VCC3.3 pin is switched by the Autonomo BEE_VCC pin
 // The DTR pin is the actual ON/OFF pin, it is A13 on Autonomo, D20 on Tatu
+//
+// This can be used for WDT too, but statusPin is not available.
 class Sodaq_3GbeeOnOff : public Sodaq_OnOffBee
 {
 public:
     Sodaq_3GbeeOnOff();
-    void init(int vcc33Pin, int onoffPin, int statusPin);
+    void init(int vcc33Pin, int onoffPin, int statusPin = -1);
     void on();
     void off();
     bool isOn();
@@ -70,6 +72,7 @@ private:
     int8_t _vcc33Pin;
     int8_t _onoffPin;
     int8_t _statusPin;
+    bool _onoff_status;
 };
 
 static Sodaq_3GbeeOnOff sodaq_3gbee_onoff;
@@ -345,6 +348,19 @@ void Sodaq_3Gbee::init(Stream& stream, int8_t vcc33Pin, int8_t onoffPin, int8_t 
     _onoff = &sodaq_3gbee_onoff;
 }
 
+// Initializes the modem instance. Sets the modem stream and the on-off power pins.
+void Sodaq_3Gbee::init_wdt(Stream& stream, int8_t onoffPin)
+{
+    debugPrintLn("[init_wdt] started.");
+
+    initBuffer(); // safe to call multiple times
+
+    setModemStream(stream);
+
+    sodaq_3gbee_onoff.init(-1, onoffPin);
+    _onoff = &sodaq_3gbee_onoff;
+}
+
 // Turns on and initializes the modem, then connects to the network and activates the data connection.
 bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* username, const char* password,
         AuthorizationTypes authorization)
@@ -375,7 +391,7 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
         }
 
         _baudRateChangeCallbackPtr(HIGH_BAUDRATE);
-        delay(1000); // wait for eveyrhing to be stable again
+        delay(1000); // wait for everything to be stable again
     }
 
     // verbose error messages
@@ -398,7 +414,7 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
 
     // SIM check
     bool simOK = false;
-    for (uint8_t i = 0; i < 5; i++) {
+    for (uint8_t i = 0; i < 10; i++) {
         SimStatuses simStatus = getSimStatus();
         if (simStatus == SimNeedsPin) {
             if (!(*simPin) || !setSimPin(simPin)) {
@@ -411,7 +427,7 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
             break;
         }
 
-        delay(20);
+        delay(200);
     }
 
     if (!simOK) {
@@ -1749,6 +1765,7 @@ Sodaq_3GbeeOnOff::Sodaq_3GbeeOnOff()
     _vcc33Pin = -1;
     _onoffPin = -1;
     _statusPin = -1;
+    _onoff_status = false;
 }
 
 // Initializes the instance
@@ -1779,14 +1796,15 @@ void Sodaq_3GbeeOnOff::on()
     // First VCC 3.3 HIGH
     if (_vcc33Pin >= 0) {
         digitalWrite(_vcc33Pin, HIGH);
+        // Wait a little
+        // TODO Figure out if this is really needed
+        delay(2);
     }
 
-    // Wait a little
-    // TODO Figure out if this is really needed
-    delay(2);
     if (_onoffPin >= 0) {
         digitalWrite(_onoffPin, HIGH);
     }
+    _onoff_status = true;
 }
 
 void Sodaq_3GbeeOnOff::off()
@@ -1803,6 +1821,7 @@ void Sodaq_3GbeeOnOff::off()
     // Should be instant
     // Let's wait a little, but not too long
     delay(50);
+    _onoff_status = false;
 }
 
 bool Sodaq_3GbeeOnOff::isOn()
@@ -1810,6 +1829,16 @@ bool Sodaq_3GbeeOnOff::isOn()
     if (_statusPin >= 0) {
         bool status = digitalRead(_statusPin);
         return status;
+    } else {
+#if defined(ARDUINO_ARCH_AVR)
+      // Use the onoff pin, which is close to useless
+      bool status = digitalRead(_onoffPin);
+      return status;
+#elif defined(ARDUINO_ARCH_SAMD)
+      // There is no status pin. On SAMD we cannot read back the onoff pin.
+      // So, our own status is all we have.
+      return _onoff_status;
+#endif
     }
 
     // No status pin. Let's assume it is on.
