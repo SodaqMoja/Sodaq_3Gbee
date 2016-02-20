@@ -256,6 +256,8 @@ private:
     bool setBinaryMode();
     bool setHexMode();
 
+    void waitForSocketOutput(uint8_t socket, uint32_t timeout=10000);
+
     // returns true if URC returns 1, false in case URC returns 0 or in case of timeout
     bool waitForFtpCommandResult(uint8_t ftpCommandIndex, uint32_t timeout=10000);
     bool changeFtpDirectory(const char* directory);
@@ -273,6 +275,7 @@ private:
     static ResponseTypes _upsndParser(ResponseTypes& response, const char* buffer, size_t size, uint8_t* thirdParam, uint8_t* dummy);
     static ResponseTypes _usocrParser(ResponseTypes& response, const char* buffer, size_t size, uint8_t* socket, uint8_t* dummy);
     static ResponseTypes _usordParser(ResponseTypes& response, const char* buffer, size_t size, char* resultBuffer, uint8_t* dummy);
+    static ResponseTypes _usoctlParser(ResponseTypes& response, const char* buffer, size_t size, uint16_t* result, uint8_t* dummy);
     static ResponseTypes _copsParser(ResponseTypes& response, const char* buffer, size_t size, char* operatorNameBuffer, size_t* operatorNameBufferSize);
     static ResponseTypes _copsParser(ResponseTypes& response, const char* buffer, size_t size, int* networkTechnology, uint8_t* dummy);
     static ResponseTypes _csqParser(ResponseTypes& response, const char* buffer, size_t size, int* rssi, int* ber);

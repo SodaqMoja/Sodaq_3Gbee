@@ -1055,7 +1055,10 @@ bool Sodaq_3Gbee::socketSend(uint8_t socket, const uint8_t* buffer, size_t size)
         }
     }
 
-    return (readResponse(NULL, 10000) == ResponseOK);
+    bool status = (readResponse(NULL, 10000) == ResponseOK);
+    // If we want to be sure it is sent right now we can enable this
+    //waitForSocketOutput(socket);
+    return status;
 }
 
 ResponseTypes Sodaq_3Gbee::_usordParser(ResponseTypes& response, const char* buffer, size_t size,
@@ -1137,6 +1140,9 @@ size_t Sodaq_3Gbee::socketReceive(uint8_t socket, uint8_t* buffer, size_t size)
 // Returns true if successful.
 bool Sodaq_3Gbee::closeSocket(uint8_t socket)
 {
+    // Wait until there are no more unacknowledged output data
+    waitForSocketOutput(socket);
+
     print("AT+USOCL=");
     println(socket);
 
@@ -1155,7 +1161,54 @@ void Sodaq_3Gbee::waitForSocketClose(uint8_t socket, uint32_t timeout)
 
     while (isAlive() && (!_socketClosedBit[socket]) && (!is_timedout(start, timeout))) {
         delay(5);
-    };
+    }
+}
+
+// Read result from AT+USOCTL=<socket>,11
+// +USOCTL: 0,11,2
+ResponseTypes Sodaq_3Gbee::_usoctlParser(ResponseTypes& response, const char* buffer, size_t size,
+        uint16_t* result, uint8_t* dummy)
+{
+    if (!result) {
+        return ResponseError;
+    }
+
+    int value;
+    // +USOCTL: 0,11,2
+    if (sscanf(buffer, "+USOCTL: %*d,%*d,%d", &value) == 1) {
+        *result = value;
+
+        return ResponseEmpty;
+    }
+
+    return ResponseError;
+}
+
+// Wait until no more unacknowledged socket output
+void Sodaq_3Gbee::waitForSocketOutput(uint8_t socket, uint32_t timeout)
+{
+    //debugPrint("[waitForSocketOutput]: ");
+    //debugPrintLn(socket);
+
+    uint32_t start = millis();
+
+    while (isAlive() && (!is_timedout(start, timeout))) {
+        print("AT+USOCTL=");
+        print(socket);
+        println(",11");
+        // parse +USOCTL: 0,11,0
+        uint16_t value;
+        if (readResponse<uint16_t, uint8_t>(_usoctlParser, &value, NULL) == ResponseOK) {
+            if (value == 0) {
+                break;
+            }
+        } else {
+            // Every other response is considered an error, so quit
+            break;
+        }
+        delay(300);
+    }
+    //debugPrintLn("[waitForSocketOutput]: end");
 }
 
 // ==== TCP
