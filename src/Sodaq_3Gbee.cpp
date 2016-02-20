@@ -405,7 +405,7 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
         }
 
         _baudRateChangeCallbackPtr(HIGH_BAUDRATE);
-        delay(1000); // wait for everything to be stable again
+        sodaq_wdt_safe_delay(1000); // wait for everything to be stable again
     }
 
     // verbose error messages
@@ -427,7 +427,10 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
 
     // SIM check
     bool simOK = false;
-    for (uint8_t i = 0; i < 10; i++) {
+    for (uint8_t i = 0; i < 20; i++) {
+        if (i > 0) {
+            sodaq_wdt_safe_delay(250);
+        }
         SimStatuses simStatus = getSimStatus();
         if (simStatus == SimNeedsPin) {
             if (!(*simPin) || !setSimPin(simPin)) {
@@ -439,13 +442,11 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
             simOK = true;
             break;
         }
-
-        delay(200);
     }
-
     if (!simOK) {
         return false;
     }
+    sodaq_wdt_safe_delay(500);
 
     // enable auto network registration
     println("AT+COPS=0");
