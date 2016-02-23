@@ -1296,6 +1296,9 @@ bool Sodaq_3Gbee::openTCP(const char *apn, const char *apnuser, const char *apnp
             if (sodaq_3gbee.connectSocket(_openTCPsocket, server, port)) {
                 retval = true;
             }
+        } else {
+            // The connect failed
+            off();
         }
     }
     return retval;
