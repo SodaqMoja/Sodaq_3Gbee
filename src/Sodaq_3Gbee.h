@@ -253,6 +253,10 @@ private:
     static bool isValidIPv4(const char* str);
     bool setSimPin(const char* simPin);
 
+    bool doSIMcheck(const char* simPin);
+    bool enableAutoRegistration();
+    bool waitForSignalQuality();
+
     bool setBinaryMode();
     bool setHexMode();
 

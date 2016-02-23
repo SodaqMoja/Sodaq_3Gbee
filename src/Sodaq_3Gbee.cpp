@@ -202,6 +202,8 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
                     return parserResponse;
                 } else {
                     // ?
+                    // ResponseEmpty indicates that the parser was satisfied
+                    // Continue until "OK", "ERROR", or whatever else.
                 }
             }
 
@@ -375,6 +377,75 @@ void Sodaq_3Gbee::init_wdt(Stream& stream, int8_t onoffPin)
     _onoff = &sodaq_3gbee_onoff;
 }
 
+bool Sodaq_3Gbee::doSIMcheck(const char* simPin)
+{
+    const uint8_t retry_count = 10;
+    for (uint8_t i = 0; i < retry_count; i++) {
+        if (i > 0) {
+            sodaq_wdt_safe_delay(250);
+        }
+
+        SimStatuses simStatus = getSimStatus();
+        if (simStatus == SimNeedsPin) {
+            if (!(*simPin) || !setSimPin(simPin)) {
+                debugPrintLn("[ERROR]: SIM needs a PIN but none was provided, or setting it failed!");
+                return false;
+            }
+        }
+        else if (simStatus == SimReady) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Enable auto network registration
+// Do AT+COPS=0 and wait for OK
+bool Sodaq_3Gbee::enableAutoRegistration()
+{
+    char operator_name[30];
+    if (getOperatorName(operator_name, sizeof(operator_name))) {
+        // We should have a name
+        return true;
+    }
+    const uint8_t retry_count = 10;
+    for (uint8_t i = 0; i < retry_count; i++) {
+        if (i > 0) {
+            sodaq_wdt_safe_delay(500);
+        }
+
+        println("AT+COPS=0");
+        if (readResponse(NULL, 40000) == ResponseOK) {
+            // TODO Fix this delay and readResponse
+            sodaq_wdt_safe_delay(3000);
+            readResponse(NULL, 250);
+            getOperatorName(operator_name, sizeof(operator_name));
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Sodaq_3Gbee::waitForSignalQuality()
+{
+    uint32_t start = millis();
+    const int8_t minRSSI = -93;         // CSQ 10 <== -113 + 2 * CSQ
+    int8_t rssi;
+    uint8_t ber;
+
+    while (!is_timedout(start, 30000)) {
+        if (getRSSIAndBER(&rssi, &ber)) {
+            if (rssi != 0 && rssi >= minRSSI) {
+                //_lastRSSI = rssi;
+                //_RSSItime = (int32_t)(millis() - start) / 1000;
+                return true;
+            }
+        }
+        sodaq_wdt_safe_delay(500);
+    }
+    return false;
+}
+
 // Turns on and initializes the modem, then connects to the network and activates the data connection.
 bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* username, const char* password,
         AuthorizationTypes authorization)
@@ -426,31 +497,15 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
     }
 
     // SIM check
-    bool simOK = false;
-    for (uint8_t i = 0; i < 20; i++) {
-        if (i > 0) {
-            sodaq_wdt_safe_delay(250);
-        }
-        SimStatuses simStatus = getSimStatus();
-        if (simStatus == SimNeedsPin) {
-            if (!(*simPin) || !setSimPin(simPin)) {
-                debugPrintLn("[ERROR]: SIM needs a PIN but none was provided, or setting it failed!");
-                return false;
-            }
-        }
-        else if (simStatus == SimReady) {
-            simOK = true;
-            break;
-        }
-    }
-    if (!simOK) {
+    if (!doSIMcheck(simPin)) {
         return false;
     }
-    sodaq_wdt_safe_delay(500);
+    if (!waitForSignalQuality()) {
+        return false;
+    }
 
     // enable auto network registration
-    println("AT+COPS=0");
-    if (readResponse(NULL, 400000) != ResponseOK) {
+    if (!enableAutoRegistration()) {
         return false;
     }
 
@@ -607,6 +662,10 @@ bool Sodaq_3Gbee::getRSSIAndBER(int8_t* rssi, uint8_t* ber)
     return false;
 }
 
+// Parse the result from AT+COPS? and when we want to see the operator name.
+// The manual says to expect:
+//   +COPS: <mode>[,<format>,<oper>[,<AcT>]]
+//   OK
 ResponseTypes Sodaq_3Gbee::_copsParser(ResponseTypes& response, const char* buffer, size_t size,
         char* operatorNameBuffer, size_t* operatorNameBufferSize)
 {
@@ -616,6 +675,13 @@ ResponseTypes Sodaq_3Gbee::_copsParser(ResponseTypes& response, const char* buff
 
     // TODO maybe limit length of string in format? needs converting int to string though
     if (sscanf(buffer, "+COPS: %*d,%*d,\"%[^\"]\",%*d", operatorNameBuffer) == 1) {
+        return ResponseEmpty;
+    }
+    if (sscanf(buffer, "+COPS: %*d,%*d,\"%[^\"]\"", operatorNameBuffer) == 1) {
+        return ResponseEmpty;
+    }
+    int dummy;
+    if (sscanf(buffer, "+COPS: %d", &dummy) == 1) {
         return ResponseEmpty;
     }
 
@@ -646,7 +712,11 @@ bool Sodaq_3Gbee::getOperatorName(char* buffer, size_t size)
 
     println("AT+COPS?");
 
-    return (readResponse<char, size_t>(_copsParser, buffer, &size) == ResponseOK);
+    if (readResponse<char, size_t>(_copsParser, buffer, &size) != ResponseOK) {
+        return false;
+    }
+    // Make sure we have at least something
+    return (buffer[0] != '\0');
 }
 
 ResponseTypes Sodaq_3Gbee::_cnumParser(ResponseTypes& response, const char* buffer, size_t size,
