@@ -416,11 +416,15 @@ bool Sodaq_3Gbee::enableAutoRegistration()
 
         println("AT+COPS=0");
         if (readResponse(NULL, 40000) == ResponseOK) {
-            // TODO Fix this delay and readResponse
-            sodaq_wdt_safe_delay(3000);
-            readResponse(NULL, 250);
-            getOperatorName(operator_name, sizeof(operator_name));
-            return true;
+            // TODO Fix this delay
+            sodaq_wdt_safe_delay(1000);
+            // We should have a name by now
+            if (getOperatorName(operator_name, sizeof(operator_name))) {
+                return true;
+            } else {
+                // Still no operator name. What can we do?
+                return false;
+            }
         }
     }
     return false;
