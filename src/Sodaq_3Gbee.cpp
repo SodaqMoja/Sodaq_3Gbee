@@ -332,20 +332,24 @@ bool Sodaq_3Gbee::sendAPN(const char* apn, const char* username, const char* pas
         return false;
     }
 
-    print("AT+UPSD=" DEFAULT_PROFILE ",2,\"");
-    print(username);
-    println("\"");
+    if (username && *username) {
+        print("AT+UPSD=" DEFAULT_PROFILE ",2,\"");
+        print(username);
+        println("\"");
 
-    if (readResponse() != ResponseOK) {
-        return false;
-    }
+        if (readResponse() != ResponseOK) {
+            return false;
+        }
 
-    print("AT+UPSD=" DEFAULT_PROFILE ",3,\"");
-    print(password);
-    println("\"");
+        if (password && *password) {
+            print("AT+UPSD=" DEFAULT_PROFILE ",3,\"");
+            print(password);
+            println("\"");
 
-    if (readResponse() != ResponseOK) {
-        return false;
+            if (readResponse() != ResponseOK) {
+                return false;
+            }
+        }
     }
 
     return true;
