@@ -444,8 +444,8 @@ bool Sodaq_3Gbee::waitForSignalQuality()
     while (!is_timedout(start, 30000)) {
         if (getRSSIAndBER(&rssi, &ber)) {
             if (rssi != 0 && rssi >= minRSSI) {
-                //_lastRSSI = rssi;
-                //_RSSItime = (int32_t)(millis() - start) / 1000;
+                _lastRSSI = rssi;
+                _CSQtime = (int32_t)(millis() - start) / 1000;
                 return true;
             }
         }

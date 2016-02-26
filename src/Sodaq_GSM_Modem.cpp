@@ -59,9 +59,9 @@ Sodaq_GSM_Modem::Sodaq_GSM_Modem() :
     _onoff(0),
     _baudRateChangeCallbackPtr(0),
     _appendCommand(false),
-    _lastCSQ(0),
+    _lastRSSI(0),
     _CSQtime(0),
-    _minSignalQuality(10)
+    _minSignalQuality(-93)      // -93 dBm
 {
     this->_isBufferInitialized = false;
 }
