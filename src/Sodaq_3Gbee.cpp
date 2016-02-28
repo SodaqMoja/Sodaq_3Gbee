@@ -1105,7 +1105,9 @@ bool Sodaq_3Gbee::connectSocket(uint8_t socket, const char* host, uint16_t port)
     print("\",");
     println(port);
 
-    return (readResponse(NULL, 30000) == ResponseOK);
+    bool retval = (readResponse(NULL, 30000) == ResponseOK);
+    _timeToSocketConnect = millis() - _startOn;
+    return retval;
 }
 
 // Sends the given buffer through the given socket.
@@ -1224,7 +1226,9 @@ bool Sodaq_3Gbee::closeSocket(uint8_t socket)
     print("AT+USOCL=");
     println(socket);
 
-    return (readResponse(NULL, 20000) == ResponseOK);
+    bool retval = (readResponse(NULL, 20000) == ResponseOK);
+    _timeToSocketClose = millis() - _startOn;
+    return retval;
 }
 
 // Blocks waiting for the given socket to be reported closed.

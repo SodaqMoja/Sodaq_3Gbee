@@ -203,6 +203,10 @@ public:
     
     bool deleteFile(const char* filename);
 
+    // Getters of diagnostic values
+    uint32_t getTimeToSocketConnect() { return _timeToSocketConnect; }
+    uint32_t getTimeToSocketClose() { return _timeToSocketClose; }
+
 protected:
     // Sets the apn, apn username and apn password to the modem.
     bool sendAPN(const char* apn, const char* username, const char* password);
@@ -247,6 +251,9 @@ private:
     char ftpFilename[256 + 1]; // always null terminated
     uint8_t ftpDirectoryChangeCounter; // counts how many nested directories were changed, to revert on close
     int _openTCPsocket;
+
+    uint32_t _timeToSocketConnect;
+    uint32_t _timeToSocketClose;
 
     static bool startsWith(const char* pre, const char* str);
     static size_t ipToString(IP_t ip, char* buffer, size_t size);
