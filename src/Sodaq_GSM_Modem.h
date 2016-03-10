@@ -117,8 +117,6 @@ typedef void (*BaudRateChangeCallbackPtr)(uint32_t newBaudrate);
 
 #define SOCKET_FAIL -1
 
-class Sodaq_3GbeeOnOff;
-
 class Sodaq_GSM_Modem {
 public:
     // Constructor
