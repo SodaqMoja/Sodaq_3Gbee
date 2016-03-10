@@ -26,14 +26,6 @@
 #include <Stream.h>
 #include "Sodaq_OnOffBee.h"
 
-// Data authorization type.
-enum AuthorizationTypes {
-    NoAuthorization = 0,
-    PAP = 1,
-    CHAP = 2,
-    AutoDetectAutorization = 3,
-};
-
 // Network registration status.
 enum NetworkRegistrationStatuses {
     UnknownNetworkRegistrationStatus = 0,
@@ -157,8 +149,8 @@ public:
     virtual bool sendAPN(const char* apn, const char* username, const char* password) = 0;
 
     // Turns on and initializes the modem, then connects to the network and activates the data connection.
-    virtual bool connect(const char* simPin, const char* apn, const char* username,
-                      const char* password, AuthorizationTypes authorization = AutoDetectAutorization) = 0;
+    virtual bool connect(const char* simPin,
+        const char* apn, const char* username, const char* password) = 0;
 
     // Disconnects the modem from the network.
     virtual bool disconnect() = 0;

@@ -18,6 +18,15 @@ enum TriBoolStates
 
 typedef TriBoolStates tribool_t;
 
+// Packet Switch Data (PSD) authorization type.
+enum PSDAuthType_e {
+    PAT_TryAll = -1,                // This is not a UBlox number. Just our own.
+    PAT_None = 0,
+    PAT_PAP = 1,
+    PAT_CHAP = 2,
+    PAT_AutoSelect = 3
+};
+
 typedef ResponseTypes (*CallbackMethodPtr)(ResponseTypes& response, const char* buffer, size_t size,
         void* parameter, void* parameter2);
 
@@ -37,9 +46,12 @@ public:
     void init(Stream& stream, int8_t vcc33Pin, int8_t onoffPin, int8_t statusPin);
     void init_wdt(Stream& stream, int8_t onoffPin);
 
+    // Set authentication of PSD profile (via AT+UPSD=<profile>,6,<num>)
+    void setPSDAuth(PSDAuthType_e authType) { _psdAuthType = authType; }
+    PSDAuthType_e numToPSDAuthType(int8_t i);
+
     // Turns on and initializes the modem, then connects to the network and activates the data connection.
-    bool connect(const char* simPin, const char* apn, const char* username, const char* password,
-        AuthorizationTypes authorization = AutoDetectAutorization);
+    bool connect(const char* simPin, const char* apn, const char* username, const char* password);
 
     // Disconnects the modem from the network.
     bool disconnect();
@@ -244,6 +256,8 @@ protected:
     };
 
 private:
+    PSDAuthType_e _psdAuthType;
+
     uint16_t _socketPendingBytes[SOCKET_COUNT]; // TODO add getter
     tribool_t _httpRequestSuccessBit[HttpRequestTypesMAX];
     bool _socketClosedBit[SOCKET_COUNT];
@@ -254,6 +268,8 @@ private:
 
     uint32_t _timeToSocketConnect;
     uint32_t _timeToSocketClose;
+
+    bool tryAuthAndActivate(PSDAuthType_e authType);
 
     static bool startsWith(const char* pre, const char* str);
     static size_t ipToString(IP_t ip, char* buffer, size_t size);

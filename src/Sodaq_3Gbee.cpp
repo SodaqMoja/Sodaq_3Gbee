@@ -81,6 +81,7 @@ Sodaq_3Gbee sodaq_3gbee;
 
 Sodaq_3Gbee::Sodaq_3Gbee()
 {
+    _psdAuthType = PAT_None;
     _openTCPsocket = -1;
 }
 
@@ -216,7 +217,7 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
             }
         }
 
-        delay(10);
+        delay(10);      // TODO Why do we need this delay?
     } while (!is_timedout(from, timeout));
 
     if (outSize) {
@@ -454,9 +455,34 @@ bool Sodaq_3Gbee::waitForSignalQuality()
     return false;
 }
 
+bool Sodaq_3Gbee::tryAuthAndActivate(PSDAuthType_e authType)
+{
+    // Set Authentication
+    print("AT+UPSD=" DEFAULT_PROFILE ",6,");
+    println(authType);
+    if (readResponse() != ResponseOK) {
+        return false;
+    }
+
+    // Activate using default profile
+    println("AT+UPSDA=" DEFAULT_PROFILE ",3");
+    if (readResponse(NULL, 200000) != ResponseOK) {
+        return false;
+    }
+
+    return true;
+}
+
+PSDAuthType_e Sodaq_3Gbee::numToPSDAuthType(int8_t i)
+{
+    if (i >= PAT_TryAll && i <= PAT_AutoSelect) {
+        return (PSDAuthType_e)i;
+    }
+    return PAT_TryAll;
+}
+
 // Turns on and initializes the modem, then connects to the network and activates the data connection.
-bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* username, const char* password,
-        AuthorizationTypes authorization)
+bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* username, const char* password)
 {
     if (!on()) {
         return false;
@@ -548,26 +574,23 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
         return false;
     }
 
-    // go through all authentication methods to check against the selected one or 
-    // to autodetect (first successful)
-    for (uint8_t i = NoAuthorization; i < AutoDetectAutorization; i++) {
-        if ((authorization == AutoDetectAutorization) || (authorization == i)) {
-            // Set Authentication
-            print("AT+UPSD=" DEFAULT_PROFILE ",6,");
-            println(i);
-            if (readResponse() != ResponseOK) {
-                return false;
-            }
-
-            // connect using default profile
-            println("AT+UPSDA=" DEFAULT_PROFILE ",3");
-            if (readResponse(NULL, 200000) == ResponseOK) {
-                return true;
-            }
+    if (_psdAuthType != PAT_TryAll) {
+        if (!tryAuthAndActivate(_psdAuthType)) {
+            return false;
+        }
+    } else {
+        // go through all authentication methods until one succeeds
+        if (tryAuthAndActivate(PAT_None)) {
+        } else if (tryAuthAndActivate(PAT_PAP)) {
+        } else if (tryAuthAndActivate(PAT_CHAP)) {
+        } else if (tryAuthAndActivate(PAT_AutoSelect)) {
+        } else {
+            return false;
         }
     }
 
-    return false;
+    // If we got this far we succeeded
+    return true;
 }
 
 // Disconnects the modem from the network.
@@ -1288,7 +1311,7 @@ void Sodaq_3Gbee::waitForSocketOutput(uint8_t socket, uint32_t timeout)
             // Every other response is considered an error, so quit
             break;
         }
-        delay(300);
+        sodaq_wdt_safe_delay(300);
     }
     //debugPrintLn("[waitForSocketOutput]: end");
 }
@@ -1301,7 +1324,7 @@ bool Sodaq_3Gbee::openTCP(const char *apn, const char *apnuser, const char *apnp
     // TODO Verify this
     bool retval = false;
     if (on()) {
-        if (sodaq_3gbee.connect(NULL, apn, apnuser, apnpwd, NoAuthorization)) {
+        if (sodaq_3gbee.connect(NULL, apn, apnuser, apnpwd)) {
             // IP_t ip = sodaq_3gbee.getHostIP(server);
             _openTCPsocket = sodaq_3gbee.createSocket(TCP);
             // TODO Use ip instead of hostname
