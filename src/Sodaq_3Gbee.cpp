@@ -413,7 +413,11 @@ bool Sodaq_3Gbee::enableAutoRegistration()
         // We should have a name
         return true;
     }
-    const uint8_t retry_count = 10;
+    // The retry count may seem pretty high, but this is on purpose
+    // In some situations (new SIM card) it can take a long time
+    // the get the registration. Subsequent registrations should
+    // go much quicker.
+    const uint8_t retry_count = 100;
     for (uint8_t i = 0; i < retry_count; i++) {
         if (i > 0) {
             sodaq_wdt_safe_delay(500);
