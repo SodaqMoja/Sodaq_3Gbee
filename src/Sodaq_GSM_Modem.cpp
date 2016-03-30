@@ -95,12 +95,14 @@ bool Sodaq_GSM_Modem::on()
 }
 
 // Turns the modem off and returns true if successful.
-bool Sodaq_GSM_Modem::off() const
+bool Sodaq_GSM_Modem::off()
 {
     // No matter if it is on or off, turn it off.
     if (_onoff) {
         _onoff->off();
     }
+
+    _echoOff = false;
 
     return !isOn();
 }
@@ -313,6 +315,13 @@ void Sodaq_GSM_Modem::setApnPass(const char * pass)
     size_t len = strlen(pass);
     _apnPass = static_cast<char*>(realloc(_apnPass, len + 1));
     strcpy(_apnPass, pass);
+}
+
+void Sodaq_GSM_Modem::setPin(const char * pin)
+{
+    size_t len = strlen(pin);
+    _pin = static_cast<char*>(realloc(_pin, len + 1));
+    strcpy(_pin, pin);
 }
 
 // Returns a character from the modem stream if read within _timeout ms or -1 otherwise.

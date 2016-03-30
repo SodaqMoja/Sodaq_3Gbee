@@ -83,6 +83,7 @@ Sodaq_3Gbee::Sodaq_3Gbee()
 {
     _psdAuthType = PAT_None;
     _openTCPsocket = -1;
+    _echoOff = false;
 }
 
 bool Sodaq_3Gbee::startsWith(const char* pre, const char* str)
@@ -382,7 +383,44 @@ void Sodaq_3Gbee::init_wdt(Stream& stream, int8_t onoffPin)
     _onoff = &sodaq_3gbee_onoff;
 }
 
-bool Sodaq_3Gbee::doSIMcheck(const char* simPin)
+void Sodaq_3Gbee::switchEchoOff()
+{
+    if (!_echoOff) {
+        // Suppress echoing
+        println("AT E0");
+        readResponse();
+        _echoOff = true;
+    }
+}
+
+bool Sodaq_3Gbee::doInitialCommands()
+{
+    // verbose error messages
+    println("AT+CMEE=2");
+    if (readResponse() != ResponseOK) {
+        return false;
+    }
+
+    // Switch to hex. Somehow this is also needed for AT+COPS=0
+    if (!setHexMode()) {
+        return false;
+    }
+
+    // enable network identification LED
+    println("AT+UGPIOC=16,2");
+    if (readResponse() != ResponseOK) {
+        return false;
+    }
+
+    // SIM check
+    if (!doSIMcheck()) {
+        return false;
+    }
+
+    return true;
+}
+
+bool Sodaq_3Gbee::doSIMcheck()
 {
     const uint8_t retry_count = 10;
     for (uint8_t i = 0; i < retry_count; i++) {
@@ -392,7 +430,7 @@ bool Sodaq_3Gbee::doSIMcheck(const char* simPin)
 
         SimStatuses simStatus = getSimStatus();
         if (simStatus == SimNeedsPin) {
-            if (!(*simPin) || !setSimPin(simPin)) {
+            if (_pin == 0 || *_pin == '\0' || !setSimPin(_pin)) {
                 debugPrintLn("[ERROR]: SIM needs a PIN but none was provided, or setting it failed!");
                 return false;
             }
@@ -486,7 +524,7 @@ PSDAuthType_e Sodaq_3Gbee::numToPSDAuthType(int8_t i)
 }
 
 // Turns on and initializes the modem, then connects to the network and activates the data connection.
-bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* username, const char* password)
+bool Sodaq_3Gbee::connect(const char* apn, const char* username, const char* password)
 {
     if (!on()) {
         return false;
@@ -494,17 +532,7 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
 
     ResponseTypes response = ResponseEmpty;
 
-    // echo off
-    println("AT E0");
-    for (uint8_t i = 0; i < 5; i++) {
-        response = readResponse();
-        if (response == ResponseOK) {
-            break;
-        }
-    }
-    if (response != ResponseOK) {
-        return false;
-    }
+    switchEchoOff();
 
     // if supported by target application, change the baudrate
     if (_baudRateChangeCallbackPtr) {
@@ -517,27 +545,10 @@ bool Sodaq_3Gbee::connect(const char* simPin, const char* apn, const char* usern
         sodaq_wdt_safe_delay(1000); // wait for everything to be stable again
     }
 
-    // verbose error messages
-    println("AT+CMEE=2");
-    if (readResponse() != ResponseOK) {
+    if (!doInitialCommands()) {
         return false;
     }
 
-    // Switch to hex. Somehow this is also needed for AT+COPS=0
-    if (!setHexMode()) {
-        return false;
-    }
-
-    // enable network identification LED
-    println("AT+UGPIOC=16,2");
-    if (readResponse() != ResponseOK) {
-        return false;
-    }
-
-    // SIM check
-    if (!doSIMcheck(simPin)) {
-        return false;
-    }
     if (!waitForSignalQuality()) {
         return false;
     }
@@ -815,6 +826,9 @@ bool Sodaq_3Gbee::getIMEI(char* buffer, size_t size)
         return false;
     }
 
+    switchEchoOff();
+    doInitialCommands();
+
     if (size > 0) {
         buffer[0] = 0;
     }
@@ -848,6 +862,9 @@ bool Sodaq_3Gbee::getCCID(char* buffer, size_t size)
         return false;
     }
 
+    switchEchoOff();
+    doInitialCommands();
+
     if (size > 0) {
         buffer[0] = 0;
     }
@@ -865,6 +882,9 @@ bool Sodaq_3Gbee::getIMSI(char* buffer, size_t size)
     if (size < 15 + 1) {
         return false;
     }
+
+    switchEchoOff();
+    doInitialCommands();
 
     if (size > 0) {
         buffer[0] = 0;
@@ -1328,7 +1348,7 @@ bool Sodaq_3Gbee::openTCP(const char *apn, const char *apnuser, const char *apnp
     // TODO Verify this
     bool retval = false;
     if (on()) {
-        if (sodaq_3gbee.connect(NULL, apn, apnuser, apnpwd)) {
+        if (sodaq_3gbee.connect(apn, apnuser, apnpwd)) {
             // IP_t ip = sodaq_3gbee.getHostIP(server);
             _openTCPsocket = sodaq_3gbee.createSocket(TCP);
             // TODO Use ip instead of hostname

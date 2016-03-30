@@ -122,7 +122,7 @@ public:
     bool on();
 
     // Turns the modem off and returns true if successful.
-    bool off() const;
+    bool off();
 
     // Sets the optional "Diagnostics and Debug" stream.
     void setDiag(Stream &stream) { _diagStream = &stream; }
@@ -137,6 +137,9 @@ public:
     void setApnUser(const char *user);
     void setApnPass(const char *pass);
 
+    // Store PIN
+    void setPin(const char *pin);
+
     // Returns the default baud rate of the modem. 
     // To be used when initializing the modem stream for the first time.
     virtual uint32_t getDefaultBaudrate() = 0;
@@ -149,8 +152,7 @@ public:
     virtual bool sendAPN(const char* apn, const char* username, const char* password) = 0;
 
     // Turns on and initializes the modem, then connects to the network and activates the data connection.
-    virtual bool connect(const char* simPin,
-        const char* apn, const char* username, const char* password) = 0;
+    virtual bool connect(const char* apn, const char* username, const char* password) = 0;
 
     // Disconnects the modem from the network.
     virtual bool disconnect() = 0;
@@ -326,6 +328,8 @@ protected:
     char * _apnUser;
     char * _apnPass;
 
+    char * _pin;
+
     // The on-off pin power controller object.
     Sodaq_OnOffBee* _onoff;
 
@@ -353,6 +357,9 @@ protected:
     // This is the minimum required CSQ to continue making the connection
     int _minSignalQuality;
 
+    // Keep track if ATE0 was sent
+    bool _echoOff;
+
     // Keep track when connect started. Use this to record various status changes.
     uint32_t _startOn;
 
@@ -365,6 +372,8 @@ protected:
 
     // Returns true if the modem is on.
     bool isOn() const;
+
+    virtual void switchEchoOff() = 0;
 
     // Sets the modem stream.
     void setModemStream(Stream& stream);

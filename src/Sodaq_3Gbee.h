@@ -51,7 +51,7 @@ public:
     PSDAuthType_e numToPSDAuthType(int8_t i);
 
     // Turns on and initializes the modem, then connects to the network and activates the data connection.
-    bool connect(const char* simPin, const char* apn, const char* username, const char* password);
+    bool connect(const char* apn, const char* username, const char* password);
 
     // Disconnects the modem from the network.
     bool disconnect();
@@ -276,7 +276,9 @@ private:
     static bool isValidIPv4(const char* str);
     bool setSimPin(const char* simPin);
 
-    bool doSIMcheck(const char* simPin);
+    void switchEchoOff();
+    bool doInitialCommands();
+    bool doSIMcheck();
     bool enableAutoRegistration();
     bool waitForSignalQuality();
 
