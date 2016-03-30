@@ -9,6 +9,7 @@
 #elif defined(ARDUINO_SODAQ_MBILI)
 #define MY_BEE_VCC  -1
 #define MySerial Serial
+#else
 #error "Please select Autonomo or Mbili"
 #endif
 
