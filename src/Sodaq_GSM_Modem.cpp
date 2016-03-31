@@ -296,11 +296,17 @@ void Sodaq_GSM_Modem::setModemStream(Stream& stream)
     this->_modemStream = &stream;
 }
 
-void Sodaq_GSM_Modem::setApn(const char * apn)
+void Sodaq_GSM_Modem::setApn(const char * apn, const char * user, const char * pass)
 {
     size_t len = strlen(apn);
     _apn = static_cast<char*>(realloc(_apn, len + 1));
     strcpy(_apn, apn);
+    if (user) {
+        setApnUser(user);
+    }
+    if (pass) {
+        setApnPass(pass);
+    }
 }
 
 void Sodaq_GSM_Modem::setApnUser(const char * user)

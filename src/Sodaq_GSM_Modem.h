@@ -133,7 +133,7 @@ public:
     void setInputBufferSize(size_t value) { this->_inputBufferSize = value; };
 
     // Store APN and user and password
-    void setApn(const char *apn);
+    void setApn(const char *apn, const char *user = NULL, const char *pass = NULL);
     void setApnUser(const char *user);
     void setApnPass(const char *pass);
 
