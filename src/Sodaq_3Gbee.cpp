@@ -83,6 +83,8 @@ Sodaq_3Gbee::Sodaq_3Gbee()
 {
     _psdAuthType = PAT_None;
     _openTCPsocket = -1;
+    _host_ip = NO_IP_ADDRESS;
+    _host_name[0] = 0;
     _echoOff = false;
 }
 
@@ -1018,12 +1020,25 @@ ResponseTypes Sodaq_3Gbee::_usocrParser(ResponseTypes& response, const char* buf
 // Returns the IP of the given host (nslookup).
 IP_t Sodaq_3Gbee::getHostIP(const char* host)
 {
+    if (_host_ip != NO_IP_ADDRESS && strcmp(host, _host_name) == 0) {
+        return _host_ip;
+    }
+
     IP_t ip = NO_IP_ADDRESS;
 
     print("AT+UDNSRN=0,\"");
     print(host);
     println("\"");
     if (readResponse<IP_t, uint8_t>(_udnsrnParser, &ip, NULL, NULL, 70000) == ResponseOK) {
+        if (ip != NO_IP_ADDRESS) {
+            // Try to cache it
+            // Only if it fits
+            if (strlen(host) < sizeof(_host_name) - 1) {
+                memset(_host_name, 0, sizeof(_host_name));
+                strncpy(_host_name, host, sizeof(_host_name) - 1);
+                _host_ip = ip;
+            }
+        }
         return ip;
     }
 

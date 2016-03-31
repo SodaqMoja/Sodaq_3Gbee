@@ -215,6 +215,8 @@ public:
     
     bool deleteFile(const char* filename);
 
+    void clearCachedHostIp() { _host_ip = NO_IP_ADDRESS; }
+
     // Getters of diagnostic values
     uint32_t getTimeToSocketConnect() { return _timeToSocketConnect; }
     uint32_t getTimeToSocketClose() { return _timeToSocketClose; }
@@ -268,6 +270,9 @@ private:
 
     uint32_t _timeToSocketConnect;
     uint32_t _timeToSocketClose;
+
+    IP_t _host_ip;
+    char _host_name[20];        // an arbitrary size, see getHostIP() for details
 
     bool tryAuthAndActivate(PSDAuthType_e authType);
 
