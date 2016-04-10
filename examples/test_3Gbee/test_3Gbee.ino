@@ -74,9 +74,15 @@ void setup()
     
     delay(500);
 
-    sodaq_3gbee.init(modemSerial, MY_BEE_VCC, BEEDTR, BEECTS);
+#if defined(ARDUINO_SODAQ_AUTONOMO)
+    sodaq_3gbee.init(Serial1, BEE_VCC, BEEDTR, BEECTS);
+#elif defined(ARDUINO_SODAQ_WDT)
+    sodaq_3gbee.init_wdt(Serial1, U2_ON);
+#elif defined(ARDUINO_SODAQ_MBILI)
+    sodaq_3gbee.init(Serial1, -1, BEEDTR, BEECTS);
+#endif
 
-    if (sodaq_3gbee.connect(NULL, APN, APN_USER, APN_PASS)) {
+    if (sodaq_3gbee.connect(APN, APN_USER, APN_PASS)) {
         MySerial.println("Modem connected to the apn successfully.");
         MySerial.println();
         MySerial.print("Local IP: ");
@@ -121,10 +127,11 @@ void setup()
             if (sodaq_3gbee.connectSocket(socket, "54.175.103.105", 30000)) {
                 MySerial.println("socket connected");
 
-                sodaq_3gbee.socketSend(socket, "123456789", 9);
+                sodaq_3gbee.socketSend(socket, "123456789");
 
                 char receiveBuffer[128];
-                size_t bytesRead = sodaq_3gbee.socketReceive(socket, receiveBuffer, sizeof(receiveBuffer));
+                memset(receiveBuffer, 0, sizeof(receiveBuffer));
+                size_t bytesRead = sodaq_3gbee.socketReceive(socket, (uint8_t *)receiveBuffer, sizeof(receiveBuffer) - 1);
 
                 MySerial.println();
                 MySerial.println();
@@ -202,9 +209,9 @@ void setup()
         {
             char writeBuffer[] = "this is, this is, this is a simple\r\ntest!";
             char readBuffer[64];
-            sodaq_3gbee.writeFile("test_file", writeBuffer, sizeof(writeBuffer));
+            sodaq_3gbee.writeFile("test_file", (uint8_t *)writeBuffer, sizeof(writeBuffer));
 
-            size_t count = sodaq_3gbee.readFile("test_file", readBuffer, sizeof(readBuffer));
+            size_t count = sodaq_3gbee.readFile("test_file", (uint8_t *)readBuffer, sizeof(readBuffer));
             MySerial.print("count: "); MySerial.println(count);
 
             printToLen(readBuffer, count);
