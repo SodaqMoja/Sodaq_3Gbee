@@ -1203,6 +1203,13 @@ bool Sodaq_3Gbee::socketSend(uint8_t socket, const uint8_t* buffer, size_t size)
     return status;
 }
 
+// Sends the given buffer through the given socket.
+// Returns true if successful.
+bool Sodaq_3Gbee::socketSend(uint8_t socket, const char* str)
+{
+    return socketSend(socket, (uint8_t *)str, strlen(str));
+}
+
 ResponseTypes Sodaq_3Gbee::_usordParser(ResponseTypes& response, const char* buffer, size_t size,
         char* resultBuffer, uint8_t* dummy)
 {

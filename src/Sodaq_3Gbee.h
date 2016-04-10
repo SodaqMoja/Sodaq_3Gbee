@@ -115,6 +115,10 @@ public:
     // Returns true if successful.
     bool socketSend(uint8_t socket, const uint8_t* buffer, size_t size);
 
+    // Sends the given string through the given socket.
+    // Returns true if successful.
+    bool socketSend(uint8_t socket, const char* str);
+
     // Reads data from the given socket into the given buffer.
     // Returns the number of bytes written to the buffer.
     // NOTE: if the modem hasn't reported available data, it blocks for up to 10 seconds waiting.
