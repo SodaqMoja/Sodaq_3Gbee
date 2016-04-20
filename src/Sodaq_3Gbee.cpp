@@ -446,22 +446,24 @@ bool Sodaq_3Gbee::doSIMcheck()
 
 // Enable auto network registration
 // Do AT+COPS=0 and wait for OK
-bool Sodaq_3Gbee::enableAutoRegistration()
+bool Sodaq_3Gbee::enableAutoRegistration(uint32_t timeout)
 {
+    uint32_t start = millis();
     char operator_name[30];
     if (getOperatorName(operator_name, sizeof(operator_name))) {
         // We should have a name
         return true;
     }
-    // The retry count may seem pretty high, but this is on purpose
+
+    // The default timeout is 4 minutes. This may seem high, but ...
     // In some situations (new SIM card) it can take a long time
     // the get the registration. Subsequent registrations should
     // go much quicker.
-    const uint8_t retry_count = 100;
-    for (uint8_t i = 0; i < retry_count; i++) {
-        if (i > 0) {
-            sodaq_wdt_safe_delay(500);
-        }
+    uint32_t delay_count = 500;
+    while (!is_timedout(start, timeout)) {
+        sodaq_wdt_safe_delay(delay_count);
+        // Next time wait a little longer
+        delay_count += 1000;
 
         println("AT+COPS=0");
         if (readResponse(NULL, 40000) == ResponseOK) {
@@ -479,14 +481,15 @@ bool Sodaq_3Gbee::enableAutoRegistration()
     return false;
 }
 
-bool Sodaq_3Gbee::waitForSignalQuality()
+bool Sodaq_3Gbee::waitForSignalQuality(uint32_t timeout)
 {
     uint32_t start = millis();
     const int8_t minRSSI = -93;         // CSQ 10 <== -113 + 2 * CSQ
     int8_t rssi;
     uint8_t ber;
 
-    while (!is_timedout(start, 30000)) {
+    uint32_t delay_count = 500;
+    while (!is_timedout(start, timeout)) {
         if (getRSSIAndBER(&rssi, &ber)) {
             if (rssi != 0 && rssi >= minRSSI) {
                 _lastRSSI = rssi;
@@ -494,7 +497,9 @@ bool Sodaq_3Gbee::waitForSignalQuality()
                 return true;
             }
         }
-        sodaq_wdt_safe_delay(500);
+        sodaq_wdt_safe_delay(delay_count);
+        // Next time wait a little longer
+        delay_count += 1000;
     }
     return false;
 }

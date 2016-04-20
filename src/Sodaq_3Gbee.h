@@ -288,8 +288,8 @@ private:
     void switchEchoOff();
     bool doInitialCommands();
     bool doSIMcheck();
-    bool enableAutoRegistration();
-    bool waitForSignalQuality();
+    bool enableAutoRegistration(uint32_t timeout = 4L * 60 * 1000);
+    bool waitForSignalQuality(uint32_t timeout = 60L * 1000);
 
     bool setBinaryMode();
     bool setHexMode();
