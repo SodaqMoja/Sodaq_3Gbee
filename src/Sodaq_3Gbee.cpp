@@ -82,10 +82,14 @@ Sodaq_3Gbee sodaq_3gbee;
 Sodaq_3Gbee::Sodaq_3Gbee()
 {
     _psdAuthType = PAT_None;
+    ftpDirectoryChangeCounter = 0;
     _openTCPsocket = -1;
+    _timeToSocketConnect = 0;
+    _timeToSocketClose = 0;
     _host_ip = NO_IP_ADDRESS;
     _host_name[0] = 0;
     _echoOff = false;
+    _flushEverySend = false;
 }
 
 bool Sodaq_3Gbee::startsWith(const char* pre, const char* str)
@@ -121,10 +125,7 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
             }
 
             debugPrint("[rdResp]: ");
-            debugPrint(buffer);
-            debugPrint(" (");
-            debugPrint(count);
-            debugPrintLn(")");
+            debugPrintLn(buffer);
 
             // handle unsolicited codes
             // TODO +UUPSDD
@@ -433,7 +434,7 @@ bool Sodaq_3Gbee::doSIMcheck()
         SimStatuses simStatus = getSimStatus();
         if (simStatus == SimNeedsPin) {
             if (_pin == 0 || *_pin == '\0' || !setSimPin(_pin)) {
-                debugPrintLn("[ERROR]: SIM needs a PIN but none was provided, or setting it failed!");
+                debugPrintLn(DEBUG_STR_ERROR "SIM needs a PIN but none was provided, or setting it failed!");
                 return false;
             }
         }
@@ -581,7 +582,7 @@ bool Sodaq_3Gbee::connect(const char* apn, const char* username, const char* pas
     // check if connected and disconnect
     if (isConnected()) {
         if (!disconnect()) {
-            debugPrintLn("[ERROR] Modem seems to be already connected and failed to disconnect!");
+            debugPrintLn(DEBUG_STR_ERROR "Modem seems to be already connected and failed to disconnect!");
             return false;
         }
     }
@@ -1203,8 +1204,10 @@ bool Sodaq_3Gbee::socketSend(uint8_t socket, const uint8_t* buffer, size_t size)
     }
 
     bool status = (readResponse(NULL, 10000) == ResponseOK);
-    // If we want to be sure it is sent right now we can enable this
-    //waitForSocketOutput(socket);
+    if (_flushEverySend && status) {
+        // We want to be sure it is sent
+        status = waitForSocketOutput(socket);
+    }
     return status;
 }
 
@@ -1341,11 +1344,12 @@ ResponseTypes Sodaq_3Gbee::_usoctlParser(ResponseTypes& response, const char* bu
 }
 
 // Wait until no more unacknowledged socket output
-void Sodaq_3Gbee::waitForSocketOutput(uint8_t socket, uint32_t timeout)
+bool Sodaq_3Gbee::waitForSocketOutput(uint8_t socket, uint32_t timeout)
 {
     //debugPrint("[waitForSocketOutput]: ");
     //debugPrintLn(socket);
 
+    bool retval = false;        // Assume the worst, sorry
     uint32_t start = millis();
 
     while (isAlive() && (!is_timedout(start, timeout))) {
@@ -1356,6 +1360,7 @@ void Sodaq_3Gbee::waitForSocketOutput(uint8_t socket, uint32_t timeout)
         uint16_t value;
         if (readResponse<uint16_t, uint8_t>(_usoctlParser, &value, NULL) == ResponseOK) {
             if (value == 0) {
+                retval = true;
                 break;
             }
         } else {
@@ -1365,6 +1370,7 @@ void Sodaq_3Gbee::waitForSocketOutput(uint8_t socket, uint32_t timeout)
         sodaq_wdt_safe_delay(300);
     }
     //debugPrintLn("[waitForSocketOutput]: end");
+    return retval;
 }
 
 // ==== TCP

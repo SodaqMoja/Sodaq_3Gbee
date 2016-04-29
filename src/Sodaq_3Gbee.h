@@ -134,6 +134,9 @@ public:
     // TODO Figure out what a good timeout value is. 60 seconds is very long.
     void waitForSocketClose(uint8_t socket, uint32_t timeout=60000);
 
+    // Make sure output is acknowledged by the server when doing socketSend
+    void setFlushEverySend(bool x = true) { _flushEverySend = x; }
+
     // ==== TCP
 
     // Open a TCP connection
@@ -278,6 +281,8 @@ private:
     IP_t _host_ip;
     char _host_name[20];        // an arbitrary size, see getHostIP() for details
 
+    bool _flushEverySend;
+
     bool tryAuthAndActivate(PSDAuthType_e authType);
 
     static bool startsWith(const char* pre, const char* str);
@@ -294,7 +299,9 @@ private:
     bool setBinaryMode();
     bool setHexMode();
 
-    void waitForSocketOutput(uint8_t socket, uint32_t timeout=10000);
+    // Wait until no more un-acknowledged data in output
+    // Return true if no more ddat, false if error, or timeout
+    bool waitForSocketOutput(uint8_t socket, uint32_t timeout=10000);
 
     // returns true if URC returns 1, false in case URC returns 0 or in case of timeout
     bool waitForFtpCommandResult(uint8_t ftpCommandIndex, uint32_t timeout=10000);
