@@ -163,7 +163,7 @@ public:
     void setMinSignalQuality(int q) { _minSignalQuality = q; }
     uint8_t getCSQtime() const { return _CSQtime; }
 
-    uint8_t getLastRSSI() const { return _lastRSSI; }
+    int8_t getLastRSSI() const { return _lastRSSI; }
 
     // Returns the current status of the network.
     virtual NetworkRegistrationStatuses getNetworkStatus() = 0;
