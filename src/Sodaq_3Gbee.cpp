@@ -473,9 +473,6 @@ bool Sodaq_3Gbee::enableAutoRegistration(uint32_t timeout)
             // We should have a name by now
             if (getOperatorName(operator_name, sizeof(operator_name))) {
                 return true;
-            } else {
-                // Still no operator name. What can we do?
-                return false;
             }
         }
     }
