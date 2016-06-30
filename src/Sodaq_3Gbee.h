@@ -140,9 +140,10 @@ public:
     // ==== TCP
 
     // Open a TCP connection
-    // This is merely a convenience wrapper which can use socket functions.
+    // These are merely a convenience wrapper which can use socket functions.
     bool openTCP(const char *apn, const char *apnuser, const char *apnpwd,
             const char *server, int port, bool transMode=false);
+    bool openTCP(const char *server, int port, bool transMode=false);
 
     // Close the TCP connection
     // This is merely a convenience wrapper which can use socket functions.

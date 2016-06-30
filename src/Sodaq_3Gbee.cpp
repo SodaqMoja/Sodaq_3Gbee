@@ -1380,7 +1380,27 @@ bool Sodaq_3Gbee::openTCP(const char *apn, const char *apnuser, const char *apnp
             // IP_t ip = sodaq_3gbee.getHostIP(server);
             _openTCPsocket = sodaq_3gbee.createSocket(TCP);
             // TODO Use ip instead of hostname
-            if (sodaq_3gbee.connectSocket(_openTCPsocket, server, port)) {
+            if (connectSocket(_openTCPsocket, server, port)) {
+                retval = true;
+            }
+        } else {
+            // The connect failed
+            off();
+        }
+    }
+    return retval;
+}
+
+bool Sodaq_3Gbee::openTCP(const char *server, int port, bool transMode)
+{
+    // TODO Verify this
+    bool retval = false;
+    if (on()) {
+        if (connect()) {
+            // IP_t ip = sodaq_3gbee.getHostIP(server);
+            _openTCPsocket = sodaq_3gbee.createSocket(TCP);
+            // TODO Use ip instead of hostname
+            if (connectSocket(_openTCPsocket, server, port)) {
                 retval = true;
             }
         } else {
