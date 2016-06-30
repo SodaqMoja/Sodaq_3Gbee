@@ -529,13 +529,11 @@ PSDAuthType_e Sodaq_3Gbee::numToPSDAuthType(int8_t i)
 }
 
 // Turns on and initializes the modem, then connects to the network and activates the data connection.
-bool Sodaq_3Gbee::connect(const char* apn, const char* username, const char* password)
+bool Sodaq_3Gbee::_connect(const char* apn, const char* username, const char* password)
 {
     if (!on()) {
         return false;
     }
-
-    ResponseTypes response = ResponseEmpty;
 
     switchEchoOff();
 
@@ -1378,7 +1376,7 @@ bool Sodaq_3Gbee::openTCP(const char *apn, const char *apnuser, const char *apnp
     // TODO Verify this
     bool retval = false;
     if (on()) {
-        if (sodaq_3gbee.connect(apn, apnuser, apnpwd)) {
+        if (_connect(apn, apnuser, apnpwd)) {
             // IP_t ip = sodaq_3gbee.getHostIP(server);
             _openTCPsocket = sodaq_3gbee.createSocket(TCP);
             // TODO Use ip instead of hostname

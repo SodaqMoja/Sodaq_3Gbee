@@ -148,11 +148,12 @@ public:
     // Needs a callback in the main application to re-initialize the stream.
     void enableBaudrateChange(BaudRateChangeCallbackPtr callback) { _baudRateChangeCallbackPtr = callback; };
 
-    // Sets the apn, apn username and apn password to the modem.
+    // Sends the apn, apn username and apn password to the modem.
     virtual bool sendAPN(const char* apn, const char* username, const char* password) = 0;
 
     // Turns on and initializes the modem, then connects to the network and activates the data connection.
-    virtual bool connect(const char* apn, const char* username, const char* password) = 0;
+    virtual bool _connect(const char* apn, const char* username, const char* password) = 0;
+    bool connect();
 
     // Disconnects the modem from the network.
     virtual bool disconnect() = 0;

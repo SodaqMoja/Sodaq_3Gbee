@@ -82,7 +82,8 @@ void setup()
     sodaq_3gbee.init(Serial1, -1, BEEDTR, BEECTS);
 #endif
 
-    if (sodaq_3gbee.connect(APN, APN_USER, APN_PASS)) {
+    sodaq_3gbee.setApn(APN, APN_USER, APN_PASS);
+    if (sodaq_3gbee.connect()) {
         MySerial.println("Modem connected to the apn successfully.");
         MySerial.println();
         MySerial.print("Local IP: ");

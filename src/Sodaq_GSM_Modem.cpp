@@ -323,6 +323,11 @@ void Sodaq_GSM_Modem::setApnPass(const char * pass)
     strcpy(_apnPass, pass);
 }
 
+bool Sodaq_GSM_Modem::connect()
+{
+    return _connect(_apn, _apnUser, _apnPass);
+}
+
 void Sodaq_GSM_Modem::setPin(const char * pin)
 {
     size_t len = strlen(pin);

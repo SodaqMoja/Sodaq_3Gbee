@@ -51,7 +51,7 @@ public:
     PSDAuthType_e numToPSDAuthType(int8_t i);
 
     // Turns on and initializes the modem, then connects to the network and activates the data connection.
-    bool connect(const char* apn, const char* username, const char* password);
+    bool _connect(const char* apn, const char* username, const char* password);
 
     // Disconnects the modem from the network.
     bool disconnect();
