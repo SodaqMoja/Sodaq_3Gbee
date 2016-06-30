@@ -1539,9 +1539,11 @@ size_t Sodaq_3Gbee::httpRequest(const char* url, uint16_t port,
     // check for success while checking URCs
     // This loop relies on readResponse being called via isAlive()
     uint32_t start = millis();
+    uint32_t delay_count = 50;
     while ((_httpRequestSuccessBit[requestType] == TriBoolUndefined) && !is_timedout(start, 30000)) {
         isAlive();
-        delay(5);
+        sodaq_wdt_safe_delay(delay_count);
+        delay_count += 250;
     }
 
     if (_httpRequestSuccessBit[requestType] == TriBoolTrue) {
