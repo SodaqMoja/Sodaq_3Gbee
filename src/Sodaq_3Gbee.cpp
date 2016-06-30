@@ -496,8 +496,10 @@ bool Sodaq_3Gbee::waitForSignalQuality(uint32_t timeout)
             }
         }
         sodaq_wdt_safe_delay(delay_count);
-        // Next time wait a little longer
-        delay_count += 1000;
+        // Next time wait a little longer, but not longer than 5 seconds
+        if (delay_count < 5000) {
+            delay_count += 1000;
+        }
     }
     return false;
 }
