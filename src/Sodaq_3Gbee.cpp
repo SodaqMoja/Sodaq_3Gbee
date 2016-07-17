@@ -1540,15 +1540,16 @@ size_t Sodaq_3Gbee::httpRequest(const char* server, uint16_t port,
 
     // NOTE: a file that includes the buffer to send has been created already
     if (requestType == PUT) {
-        println(",\"" DEFAULT_HTTP_SEND_TMP_FILENAME "\""); // param1: file from filesystem to send
+        print(",\"" DEFAULT_HTTP_SEND_TMP_FILENAME "\""); // param1: file from filesystem to send
     }
     else if (requestType == POST) {
         print(",\"" DEFAULT_HTTP_SEND_TMP_FILENAME "\""); // param1: file from filesystem to send
-        println(",1"); // param2: content type, 1=text/plain
+        print(",1"); // param2: content type, 1=text/plain
         // TODO consider making the content type a parameter
     } else {
-        println("");
+        // GET, etc
     }
+    println("");
 
     if (readResponse() != ResponseOK) {
         return 0;
