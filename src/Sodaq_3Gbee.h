@@ -68,6 +68,8 @@ public:
     // Gets the Received Signal Strength Indication in dBm and Bit Error Rate.
     // Returns true if successful.
     bool getRSSIAndBER(int8_t* rssi, uint8_t* ber);
+    int8_t convertCSQ2RSSI(uint8_t csq) const;
+    uint8_t convertRSSI2CSQ(int8_t rssi) const;
 
     // Gets the Operator Name.
     // Returns true if successful.

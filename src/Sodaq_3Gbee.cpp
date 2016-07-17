@@ -700,17 +700,35 @@ bool Sodaq_3Gbee::getRSSIAndBER(int8_t* rssi, uint8_t* ber)
     
     println("AT+CSQ");
 
-    int rssiRaw = 0;
+    int csqRaw = 0;
     int berRaw = 0;
 
-    if (readResponse<int, int>(_csqParser, &rssiRaw, &berRaw) == ResponseOK) {
-        *rssi = ((rssiRaw == 99) ? 0 : -113 + 2 * rssiRaw);
+    if (readResponse<int, int>(_csqParser, &csqRaw, &berRaw) == ResponseOK) {
+        *rssi = ((csqRaw == 99) ? 0 : convertCSQ2RSSI(csqRaw));
         *ber = ((berRaw == 99 || static_cast<size_t>(berRaw) >= sizeof(berValues)) ? 0 : berValues[berRaw]);
         
         return true;
     }
 
     return false;
+}
+
+/*
+ * The range is the following:
+ *   0: -113 dBm or less
+ *   1: -111 dBm
+ *   2..30: from -109 to -53 dBm with 2 dBm steps
+ *   31: -51 dBm or greater
+ *   99: not known or not detectable or currently not available
+ */
+int8_t Sodaq_3Gbee::convertCSQ2RSSI(uint8_t csq) const
+{
+    return -113 + 2 * csq;
+}
+
+uint8_t Sodaq_3Gbee::convertRSSI2CSQ(int8_t rssi) const
+{
+    return (rssi + 113) / 2;
 }
 
 // Parse the result from AT+COPS? and when we want to see the operator name.

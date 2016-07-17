@@ -162,7 +162,10 @@ public:
     virtual bool isConnected() = 0;
 
     void setMinSignalQuality(int q) { _minSignalQuality = q; }
+    int8_t getMinSignalQuality() const { return _minSignalQuality; }
     uint8_t getCSQtime() const { return _CSQtime; }
+    virtual int8_t convertCSQ2RSSI(uint8_t csq) const = 0;
+    virtual uint8_t convertRSSI2CSQ(int8_t rssi) const = 0;
 
     int8_t getLastRSSI() const { return _lastRSSI; }
 
