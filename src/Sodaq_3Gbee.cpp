@@ -1474,7 +1474,7 @@ bool Sodaq_3Gbee::receiveDataTCP(uint8_t *data, size_t data_len, uint16_t timeou
 // Creates an HTTP request using the (optional) given buffer and 
 // (optionally) returns the received data.
 // endpoint should include the initial "/".
-size_t Sodaq_3Gbee::httpRequest(const char* url, uint16_t port,
+size_t Sodaq_3Gbee::httpRequest(const char* server, uint16_t port,
         const char* endpoint, HttpRequestTypes requestType,
         char* responseBuffer, size_t responseSize,
         const char* sendBuffer, size_t sendSize)
@@ -1494,10 +1494,10 @@ size_t Sodaq_3Gbee::httpRequest(const char* url, uint16_t port,
         return 0;
     }
 
-    // set server domain
+    // set server host name
     print("AT+UHTTP=0,");
-    print(isValidIPv4(url) ? "0,\"" : "1,\"");
-    print(url);
+    print(isValidIPv4(server) ? "0,\"" : "1,\"");
+    print(server);
     println("\"");
     if (readResponse() != ResponseOK) {
         return 0;
