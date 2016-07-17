@@ -1397,8 +1397,8 @@ bool Sodaq_3Gbee::openTCP(const char *apn, const char *apnuser, const char *apnp
     bool retval = false;
     if (on()) {
         if (_connect(apn, apnuser, apnpwd)) {
-            // IP_t ip = sodaq_3gbee.getHostIP(server);
-            _openTCPsocket = sodaq_3gbee.createSocket(TCP);
+            // IP_t ip = getHostIP(server);
+            _openTCPsocket = createSocket(TCP);
             // TODO Use ip instead of hostname
             if (connectSocket(_openTCPsocket, server, port)) {
                 retval = true;
@@ -1417,8 +1417,8 @@ bool Sodaq_3Gbee::openTCP(const char *server, int port, bool transMode)
     bool retval = false;
     if (on()) {
         if (connect()) {
-            // IP_t ip = sodaq_3gbee.getHostIP(server);
-            _openTCPsocket = sodaq_3gbee.createSocket(TCP);
+            // IP_t ip = getHostIP(server);
+            _openTCPsocket = createSocket(TCP);
             // TODO Use ip instead of hostname
             if (connectSocket(_openTCPsocket, server, port)) {
                 retval = true;
