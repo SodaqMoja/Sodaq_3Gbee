@@ -181,6 +181,11 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
                 ftpCommandURC[1] = static_cast<uint8_t>(param2);
             }
 
+            // ignore the Network Selection Control +PACSP URC
+            if (startsWith("+PACSP", buffer)) {
+              continue;
+            }
+
             if (startsWith(STR_AT, buffer)) {
                 continue; // skip echoed back command
             }
