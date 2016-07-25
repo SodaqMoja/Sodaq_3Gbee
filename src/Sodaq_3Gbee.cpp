@@ -544,6 +544,10 @@ bool Sodaq_3Gbee::_connect(const char* apn, const char* username, const char* pa
 
     switchEchoOff();
 
+    // switch off the +UMWI URCs
+    println("AT+UMWI=0");
+    readResponse();
+
     // if supported by target application, change the baudrate
     if (_baudRateChangeCallbackPtr) {
         println("AT+IPR=" STR(HIGH_BAUDRATE));
