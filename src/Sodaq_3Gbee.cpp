@@ -545,6 +545,8 @@ bool Sodaq_3Gbee::_connect(const char* apn, const char* username, const char* pa
     switchEchoOff();
 
     // switch off the +UMWI URCs
+    // should we move this to switchEchoOff()
+    // or some other location?
     println("AT+UMWI=0");
     readResponse();
 
