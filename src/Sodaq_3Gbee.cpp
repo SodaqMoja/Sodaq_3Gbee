@@ -181,6 +181,11 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
                 ftpCommandURC[1] = static_cast<uint8_t>(param2);
             }
 
+            // ignore the Network Selection Control +PACSP URC
+            if (startsWith("+PACSP", buffer)) {
+              continue;
+            }
+
             if (startsWith(STR_AT, buffer)) {
                 continue; // skip echoed back command
             }
@@ -538,6 +543,12 @@ bool Sodaq_3Gbee::_connect(const char* apn, const char* username, const char* pa
     }
 
     switchEchoOff();
+
+    // switch off the +UMWI URCs
+    // should we move this to switchEchoOff()
+    // or some other location?
+    println("AT+UMWI=0");
+    readResponse();
 
     // if supported by target application, change the baudrate
     if (_baudRateChangeCallbackPtr) {
