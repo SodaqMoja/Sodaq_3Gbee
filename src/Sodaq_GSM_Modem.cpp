@@ -374,6 +374,9 @@ size_t Sodaq_GSM_Modem::readBytesUntil(char terminator, char* buffer, size_t len
         *buffer++ = static_cast<char>(c);
         index++;
     }
+    if (index < length) {
+        *buffer = '\0';
+    }
 
     // TODO distinguise timeout from empty string?
     // TODO return error for overflow?
