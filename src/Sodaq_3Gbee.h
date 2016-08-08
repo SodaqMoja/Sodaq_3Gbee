@@ -231,6 +231,12 @@ public:
     uint32_t getTimeToSocketConnect() { return _timeToSocketConnect; }
     uint32_t getTimeToSocketClose() { return _timeToSocketClose; }
 
+    // Selecting the best network
+    bool deregisterNetwork(uint32_t timeout);
+    bool getOperators(String & listOfOperators);
+    bool getNthOperator(const String & listOfOperators, size_t nth, String & oper_long, size_t & status);
+    bool selectOperator(const String & oper_long, uint32_t timeout);
+
 protected:
     // Sets the apn, apn username and apn password to the modem.
     bool sendAPN(const char* apn, const char* username, const char* password);
@@ -281,6 +287,8 @@ private:
     uint32_t _timeToSocketConnect;
     uint32_t _timeToSocketClose;
 
+    bool _foundUUPSDD;
+
     IP_t _host_ip;
     char _host_name[20];        // an arbitrary size, see getHostIP() for details
 
@@ -303,13 +311,15 @@ private:
     bool setHexMode();
 
     // Wait until no more un-acknowledged data in output
-    // Return true if no more ddat, false if error, or timeout
+    // Return true if no more data, false if error, or timeout
     bool waitForSocketOutput(uint8_t socket, uint32_t timeout=10000);
 
     // returns true if URC returns 1, false in case URC returns 0 or in case of timeout
     bool waitForFtpCommandResult(uint8_t ftpCommandIndex, uint32_t timeout=10000);
     bool changeFtpDirectory(const char* directory);
     void resetFtpDirectoryIfNeeded();
+
+    bool waitForDeactivatedNetwork(uint32_t timeout);
 
     void cleanupTempFiles();
 
@@ -334,6 +344,8 @@ private:
     static ResponseTypes _ulstfileParser(ResponseTypes& response, const char* buffer, size_t size, uint32_t* filesize, uint8_t* dummy);
     static ResponseTypes _cmgrParser(ResponseTypes& response, const char* buffer, size_t size, char* phoneNumber, char* smsBuffer);
     static ResponseTypes _cmglParser(ResponseTypes& response, const char* buffer, size_t size, int* indexList, size_t* indexListSize);
+
+    String getValueAt(String data, char separator, int index);
 };
 
 extern Sodaq_3Gbee sodaq_3gbee;

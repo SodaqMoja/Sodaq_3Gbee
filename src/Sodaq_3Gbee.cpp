@@ -128,7 +128,7 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
             debugPrintLn(buffer);
 
             // handle unsolicited codes
-            // TODO +UUPSDD
+
             int param1, param2;
             if (sscanf(buffer, "+UUSORD: %d,%d", &param1, &param2) == 2) {
                 uint16_t socket_nr = param1;
@@ -179,6 +179,13 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
 
                 ftpCommandURC[0] = static_cast<uint8_t>(param1);
                 ftpCommandURC[1] = static_cast<uint8_t>(param2);
+            }
+            else if (sscanf(buffer, "+UUPSDD: %d", &param1) == 1) {
+                debugPrint("UUPSDD profile: ");
+                debugPrintLn(param1);
+                // Ignore profile
+                _foundUUPSDD = true;
+                continue;
             }
 
             // ignore the Network Selection Control +PACSP URC
@@ -647,7 +654,20 @@ ResponseTypes Sodaq_3Gbee::_cregParser(ResponseTypes& response, const char* buff
     return ResponseError;
 }
 
-// Returns the current status of the network.
+// Returns the current status of the network registration.
+/*
+ * Meaning of <status>
+ *  0: not registered, the MT is not currently searching a new operator to register to
+ *  1: registered, home network
+ *  2: not registered, but the MT is currently searching a new operator to register to
+ *  3: registration denied
+ *  4: unknown (e.g. out of GERAN/UTRAN/E-UTRAN coverage)
+ *  5: registered, roaming
+ *  6: registered for "SMS only", home network (applicable only when <AcTStatus> indicates E-UTRAN)
+ *  7: registered for "SMS only", roaming (applicable only when <AcTStatus> indicates E-UTRAN)
+ *  9: registered for "CSFB not preferred", home network (applicable only when <AcTStatus> indicates E-UTRAN)
+ * 10: registered for "CSFB not preferred", roaming (applicable only when <AcTStatus> indicates E-UTRAN)
+ */
 NetworkRegistrationStatuses Sodaq_3Gbee::getNetworkStatus()
 {
     println("AT+CREG?"); // TODO ? +CGREG
@@ -660,6 +680,7 @@ NetworkRegistrationStatuses Sodaq_3Gbee::getNetworkStatus()
             case 2: return NoNetworkRegistrationStatus;
             case 3: return Denied;
             case 4: return UnknownNetworkRegistrationStatus;
+            case 5: return Roaming;
             default: return Denied; // rest of statuses are actually registered, but they do not support data
         }
     }
@@ -799,6 +820,164 @@ bool Sodaq_3Gbee::getOperatorName(char* buffer, size_t size)
     return (buffer[0] != '\0');
 }
 
+bool Sodaq_3Gbee::getOperators(String & listOfOperators)
+{
+    //
+    //size_t Sodaq_3Gbee::httpRequest(const char* url, uint16_t port,
+    //    const char* endpoint, HttpRequestTypes requestType,
+    //          char* responseBuffer, size_t responseSize,
+    //          const char* sendBuffer, size_t sendSize)
+    //
+    //
+    debugPrintLn("checking networks - begin");
+
+    // ???? Maybe not needed to de-register to get the operators list
+    if (false) {
+        deregisterNetwork(10000);
+    }
+
+    // Get list of operators
+    // +COPS: [(<stat>, long <oper>, short <oper>, numeric <oper>[,<AcT>])
+    //         [,(<stat>, long <oper>, short <oper>, numeric <oper>[,<AcT>]),[...]]],
+    //         (list of supported <mode>s),
+    //         (list of supported<format>s)
+    // On other words, a list of operators, plus list of modes, plus list of formats.
+    // For example: +COPS: (1,"vodafone NL","voda NL","20404"),
+    //                     (3,"NL KPN","NL KPN","20408"),
+    //                     (3,"T-Mobile NL","TMO NL","20416"),,
+    //                     (0-6),
+    //                     (0-2)
+    println("AT+COPS=?");
+
+    char buffer[250];
+    size_t buf_size = sizeof(buffer);
+    buffer[0] = '\0';
+    bool retval;
+    retval = readResponse<char, size_t>(_nakedStringParser, buffer, &buf_size, NULL, 120000);
+    if (retval == ResponseOK) {
+        listOfOperators = buffer;
+        debugPrintLn(String("the buffer is: ") + listOfOperators);
+        if (listOfOperators.startsWith("+COPS: ")) {
+            listOfOperators = listOfOperators.substring(7);
+        }
+    }
+    return retval == ResponseOK;
+}
+
+bool Sodaq_3Gbee::getNthOperator(const String & listOfOperators, size_t nth, String & oper_long, size_t & status)
+{
+    bool retval = false;
+    size_t cur_ix = 0;
+    int lpar_ix = -1;
+    int rpar_ix = -1;
+    for (size_t ix = 0; ix <= nth; ++ix) {
+        rpar_ix = -1;
+        lpar_ix = listOfOperators.indexOf('(', cur_ix);
+        //debugPrintLn(String(" lpar_ix ") + lpar_ix);
+        if (lpar_ix < 0) {
+            // No more "(" found
+            break;
+        }
+        if ((size_t)lpar_ix != cur_ix) {
+            // This is probably the empty field in the network list.
+            break;
+        }
+        rpar_ix = listOfOperators.indexOf(')', lpar_ix);
+        //debugPrintLn(String(" rpar_ix ") + rpar_ix);
+        if (rpar_ix < 0) {
+            // No more ")" found
+            break;
+        }
+        cur_ix = rpar_ix + 1;
+        if (cur_ix < listOfOperators.length() && listOfOperators.charAt(cur_ix) == ',') {
+            // Skip comma separator
+            ++cur_ix;
+        }
+    }
+    if (lpar_ix >= 0 && rpar_ix >= 0) {
+        // Found a match
+        String tmp = listOfOperators.substring(lpar_ix + 1, rpar_ix - 1);
+        status = getValueAt(tmp, ',', 0).toInt();
+        String tmp2 = getValueAt(tmp, ',', 1);
+        // Strip quotes
+        if (tmp2.length() >= 2 && tmp2.charAt(0) == '"' && tmp2.charAt(tmp2.length() - 1) == '"') {
+            oper_long = tmp2.substring(1, tmp2.length() - 1);
+        } else {
+            oper_long = tmp2;
+        }
+        retval = true;
+    }
+
+    return retval;
+}
+
+bool Sodaq_3Gbee::selectOperator(const String & oper_long, uint32_t timeout)
+{
+    bool retval = false;
+
+    deregisterNetwork(10000);
+
+    // Manual select operator, using long format
+    println(String("AT+COPS=1,0,\"") + oper_long + '"');
+    if (readResponse(NULL, 60000) == ResponseOK) {
+        // Now wait for URC +CREG
+        // ???? How do we do that?
+        uint32_t start = millis();
+        while (!is_timedout(start, timeout)) {
+            NetworkRegistrationStatuses status;
+            status = getNetworkStatus();
+            if (status == Home || status == Roaming) {
+                retval = true;
+                break;
+            }
+        }
+    }
+
+    return retval;
+}
+
+bool Sodaq_3Gbee::waitForDeactivatedNetwork(uint32_t timeout)
+{
+    // This loop relies on readResponse being called via isAlive()
+    uint32_t start = millis();
+    uint32_t delay_count = 50;
+    _foundUUPSDD = false;
+    while (!_foundUUPSDD && !is_timedout(start, timeout)) {
+        isAlive();
+        sodaq_wdt_safe_delay(delay_count);
+        delay_count += 250;
+    }
+
+    return _foundUUPSDD;
+}
+
+bool Sodaq_3Gbee::deregisterNetwork(uint32_t timeout)
+{
+    bool retval = false;
+    println("AT+COPS=2");
+    if (readResponse() == ResponseOK) {
+        debugPrintLn("OK, deregister from network");
+        // ?? Expect +UUPSDD: 0
+        retval = waitForDeactivatedNetwork(timeout);
+    }
+    return retval;
+}
+
+String Sodaq_3Gbee::getValueAt(String data, char separator, int index)
+{
+    int found = 0;
+    int strIndex[] = { 0, -1 };
+    int maxIndex = data.length() - 1;
+    for (int i = 0; i <= maxIndex && found <= index; i++) {
+        if (data.charAt(i) == separator || i == maxIndex) {
+            found++;
+            strIndex[0] = strIndex[1] + 1;
+            strIndex[1] = (i == maxIndex) ? i + 1 : i;
+        }
+    }
+    return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
+}
+
 ResponseTypes Sodaq_3Gbee::_cnumParser(ResponseTypes& response, const char* buffer, size_t size,
         char* numberBuffer, size_t* numberBufferSize)
 {
@@ -840,9 +1019,9 @@ ResponseTypes Sodaq_3Gbee::_nakedStringParser(ResponseTypes& response, const cha
         return ResponseError;
     }
 
+    stringBuffer[0] = 0;
     if (*stringBufferSize > 0)
     {
-        stringBuffer[0] = 0;
         strncat(stringBuffer, buffer, *stringBufferSize - 1);
 
         return ResponseEmpty;
