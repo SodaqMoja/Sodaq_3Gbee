@@ -411,16 +411,17 @@ size_t Sodaq_GSM_Modem::readBytes(uint8_t* buffer, size_t length, uint32_t timeo
 // Returns the number of bytes read, not including the null terminator.
 size_t Sodaq_GSM_Modem::readLn(char* buffer, size_t size, uint32_t timeout)
 {
-    size_t len = readBytesUntil(SODAQ_GSM_TERMINATOR[SODAQ_GSM_TERMINATOR_LEN - 1], buffer, size, timeout);
+    // Use size-1 to leave room for a string terminator
+    size_t len = readBytesUntil(SODAQ_GSM_TERMINATOR[SODAQ_GSM_TERMINATOR_LEN - 1], buffer, size - 1, timeout);
 
     // check if the terminator is more than 1 characters, then check if the first character of it exists 
     // in the calculated position and terminate the string there
-    if ((SODAQ_GSM_TERMINATOR_LEN > 1) && (_inputBuffer[len - (SODAQ_GSM_TERMINATOR_LEN - 1)] == SODAQ_GSM_TERMINATOR[0])) {
+    if ((SODAQ_GSM_TERMINATOR_LEN > 1) && (buffer[len - (SODAQ_GSM_TERMINATOR_LEN - 1)] == SODAQ_GSM_TERMINATOR[0])) {
         len -= SODAQ_GSM_TERMINATOR_LEN - 1;
     }
 
-    // terminate string
-    _inputBuffer[len] = 0;
+    // terminate string, there should always be room for it (see size-1 above)
+    buffer[len] = '\0';
 
     return len;
 }
