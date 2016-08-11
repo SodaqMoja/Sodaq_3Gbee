@@ -222,6 +222,10 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
                     // ResponseEmpty indicates that the parser was satisfied
                     // Continue until "OK", "ERROR", or whatever else.
                 }
+                // Prevent calling the parser again.
+                // This could happen if the input line is too long. It will be split
+                // and the next readLn will return the next part.
+                parserMethod = 0;
             }
 
             // at this point, the parserMethod has ran and there is no override response from it, 
