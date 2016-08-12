@@ -75,6 +75,14 @@ public:
     // Returns true if successful.
     bool getOperatorName(char* buffer, size_t size);
 
+    // Select the Best Operator.
+    // Returns true if successful.
+    bool selectBestOperator(Stream & verbose_stream);
+
+    // Select the an Operator (and measure RSSI).
+    // Returns true if successful.
+    bool selectOperatorWithRSSI(const String & oper_long, const String & oper_num, int8_t & lastRSSI, Stream & verbose_stream);
+
     // Gets Mobile Directory Number.
     // Returns true if successful.
     bool getMobileDirectoryNumber(char* buffer, size_t size);

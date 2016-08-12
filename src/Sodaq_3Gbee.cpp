@@ -824,6 +824,127 @@ bool Sodaq_3Gbee::getOperatorName(char* buffer, size_t size)
     return (buffer[0] != '\0');
 }
 
+bool Sodaq_3Gbee::selectBestOperator(Stream & verbose_stream)
+{
+    String listOfOperators;
+    String oper_long;
+    String oper_num;
+    size_t status;
+    uint8_t highest_csq = 0;
+    size_t highest_csq_ix = 0;
+    int8_t lastRSSI;
+    uint8_t lastCSQ;
+
+    // Get list of operators
+    // Keep track of highest CSQ.
+    if (!getOperators(listOfOperators)) {
+        verbose_stream.println("ERROR: Unable to get a list of operators");
+        return false;
+    }
+
+    verbose_stream.println(String("List of available operators: ") + listOfOperators);
+    for (size_t ix = 0; ; ++ix) {
+        if (getNthOperator(listOfOperators, ix, oper_long, oper_num, status)) {
+            verbose_stream.println();
+            verbose_stream.println("=======================");
+            verbose_stream.println(String("  operator: ") + oper_long);
+            verbose_stream.println(String("    number: ") + oper_num);
+            //debugPrintLn(String("  status: ") + status);
+            if (status == 1 || status == 2) {      // 1: available, 2: current, 3: forbidden
+                if (selectOperatorWithRSSI(oper_long, oper_num, lastRSSI, verbose_stream)) {
+                    lastCSQ = convertRSSI2CSQ(lastRSSI);
+                    verbose_stream.println(String("  RSSI: ") + lastRSSI + "dBm (CSQ: " + lastCSQ + ")");
+                    if (lastCSQ > highest_csq) {
+                        highest_csq = lastCSQ;
+                        highest_csq_ix = ix;
+                    }
+                }
+            }
+        } else {
+            // No more operators in the list
+            break;
+        }
+    }
+
+    // Select the operator with highest CSQ
+    verbose_stream.println();
+    if (!getNthOperator(listOfOperators, highest_csq_ix, oper_long, oper_num, status)) {
+        // Shouldn't happen
+        return false;
+    }
+    verbose_stream.println("=======================");
+    verbose_stream.println(String("Selecting best operator: \"") + oper_long + '"');
+    verbose_stream.println(String("                 number: ") + oper_num);
+
+    if (!(status == 1 || status == 2)) {      // 1: available, 2: current, 3: forbidden
+        // Shouldn't happen
+        return false;
+    }
+
+    if (!selectOperatorWithRSSI(oper_long, oper_num, lastRSSI, verbose_stream)) {
+        // Shouldn't happen, error message already given
+        return false;
+    }
+
+    // No need to disconnect. We're switching off in a moment.
+
+    return true;
+}
+
+bool Sodaq_3Gbee::selectOperatorWithRSSI(const String & oper_long, const String & oper_num,
+        int8_t & lastRSSI, Stream & verbose_stream)
+{
+    String use_name;
+    if (oper_num != "" && selectOperatorNum(oper_num, 60000)) {
+        // OK
+        use_name = oper_num;
+    } else if (oper_long != "" && selectOperator(oper_long, 60000)) {
+        // OK
+        use_name = oper_long;
+    } else {
+        verbose_stream.println("ERROR: Failed to select operator");
+        return false;
+    }
+
+    // This could return operator name long, short or number
+    char op_name[30];
+    if (!getOperatorName(op_name, sizeof(op_name))) {
+        verbose_stream.println("ERROR: Failed to get selected operator");
+        return false;
+    }
+
+    // Is it what we expected?
+    if (use_name != String(op_name)) {
+        verbose_stream.println(String("WARNING: Selected ") + use_name + ", but got " + op_name);
+        return false;
+    }
+
+    // Disconnect, just in case it is connected
+    disconnect();
+
+    // Connect and measure CSQ/RSSI
+    if (!connect()) {
+        verbose_stream.println("ERROR: Failed to connect to operator");
+        return false;
+    }
+
+    IP_t local_ip = getLocalIP();
+    if (local_ip == NO_IP_ADDRESS) {
+        verbose_stream.println("ERROR: Failed to get IP address");
+        return false;
+    }
+
+    char ip_txt[20];
+    snprintf(ip_txt, sizeof(ip_txt), "%d.%d.%d.%d", IP_TO_TUPLE(local_ip));
+    verbose_stream.println(String("  IP addr: ") + ip_txt);
+#if 0
+    // Ping some server
+#endif
+    lastRSSI = getLastRSSI();
+
+    return true;
+}
+
 bool Sodaq_3Gbee::getOperators(String & listOfOperators)
 {
     //
@@ -860,7 +981,6 @@ bool Sodaq_3Gbee::getOperators(String & listOfOperators)
     retval = readResponse<char, size_t>(_nakedStringParser, buffer, &buf_size, NULL, 120000);
     if (retval == ResponseOK) {
         listOfOperators = buffer;
-        debugPrintLn(String("the buffer is: ") + listOfOperators);
         if (listOfOperators.startsWith("+COPS: ")) {
             listOfOperators = listOfOperators.substring(7);
         }
@@ -868,7 +988,7 @@ bool Sodaq_3Gbee::getOperators(String & listOfOperators)
     return retval == ResponseOK;
 }
 
-bool Sodaq_3Gbee::getNthOperator(const String & listOfOperators, size_t nth, String & oper_long, size_t & status)
+bool Sodaq_3Gbee::getNthOperator(const String & listOfOperators, size_t nth, String & oper_long, String & oper_num, size_t & status)
 {
     bool retval = false;
     size_t cur_ix = 0;
@@ -900,14 +1020,23 @@ bool Sodaq_3Gbee::getNthOperator(const String & listOfOperators, size_t nth, Str
     }
     if (lpar_ix >= 0 && rpar_ix >= 0) {
         // Found a match
-        String tmp = listOfOperators.substring(lpar_ix + 1, rpar_ix - 1);
+        String tmp = listOfOperators.substring(lpar_ix + 1, rpar_ix);
         status = getValueAt(tmp, ',', 0).toInt();
+        // Long format
         String tmp2 = getValueAt(tmp, ',', 1);
         // Strip quotes
         if (tmp2.length() >= 2 && tmp2.charAt(0) == '"' && tmp2.charAt(tmp2.length() - 1) == '"') {
             oper_long = tmp2.substring(1, tmp2.length() - 1);
         } else {
             oper_long = tmp2;
+        }
+        // Numeric format
+        tmp2 = getValueAt(tmp, ',', 3);
+        // Strip quotes
+        if (tmp2.length() >= 2 && tmp2.charAt(0) == '"' && tmp2.charAt(tmp2.length() - 1) == '"') {
+            oper_num = tmp2.substring(1, tmp2.length() - 1);
+        } else {
+            oper_num = tmp2;
         }
         retval = true;
     }
@@ -923,6 +1052,31 @@ bool Sodaq_3Gbee::selectOperator(const String & oper_long, uint32_t timeout)
 
     // Manual select operator, using long format
     println(String("AT+COPS=1,0,\"") + oper_long + '"');
+    if (readResponse(NULL, 60000) == ResponseOK) {
+        // Now wait for URC +CREG
+        // ???? How do we do that?
+        uint32_t start = millis();
+        while (!is_timedout(start, timeout)) {
+            NetworkRegistrationStatuses status;
+            status = getNetworkStatus();
+            if (status == Home || status == Roaming) {
+                retval = true;
+                break;
+            }
+        }
+    }
+
+    return retval;
+}
+
+bool Sodaq_3Gbee::selectOperatorNum(const String & oper_num, uint32_t timeout)
+{
+    bool retval = false;
+
+    deregisterNetwork(10000);
+
+    // Manual select operator, using numeric format
+    println(String("AT+COPS=1,2,\"") + oper_num + '"');
     if (readResponse(NULL, 60000) == ResponseOK) {
         // Now wait for URC +CREG
         // ???? How do we do that?

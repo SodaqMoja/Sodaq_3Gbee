@@ -179,6 +179,15 @@ public:
     // Returns true if successful.
     virtual bool getOperatorName(char* buffer, size_t size) = 0;
 
+    // Select the Best Operator.
+    // Returns true if successful.
+    virtual bool selectBestOperator(Stream & verbose_stream) = 0;
+
+    // Select the an Operator (and measure RSSI).
+    // Returns true if successful.
+    virtual bool selectOperatorWithRSSI(const String & oper_long, const String & oper_num,
+            int8_t & lastRSSI, Stream & verbose_stream) = 0;
+
     // Gets Mobile Directory Number.
     // Returns true if successful.
     virtual bool getMobileDirectoryNumber(char* buffer, size_t size) = 0;
