@@ -53,6 +53,9 @@ public:
     // Turns on and initializes the modem, then connects to the network and activates the data connection.
     bool connect();
 
+    // Turns on and initializes the modem.
+    bool _connectSimple();
+
     // Disconnects the modem from the network.
     bool disconnect();
 

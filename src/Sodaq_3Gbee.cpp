@@ -549,34 +549,7 @@ PSDAuthType_e Sodaq_3Gbee::numToPSDAuthType(int8_t i)
 // Turns on and initializes the modem, then connects to the network and activates the data connection.
 bool Sodaq_3Gbee::connect()
 {
-    if (!on()) {
-        return false;
-    }
-
-    switchEchoOff();
-
-    // switch off the +UMWI URCs
-    // should we move this to switchEchoOff()
-    // or some other location?
-    println("AT+UMWI=0");
-    readResponse();
-
-    // if supported by target application, change the baudrate
-    if (_baudRateChangeCallbackPtr) {
-        println("AT+IPR=" STR(HIGH_BAUDRATE));
-        if (readResponse() != ResponseOK) {
-            return false;
-        }
-
-        _baudRateChangeCallbackPtr(HIGH_BAUDRATE);
-        sodaq_wdt_safe_delay(1000); // wait for everything to be stable again
-    }
-
-    if (!doInitialCommands()) {
-        return false;
-    }
-
-    if (!waitForSignalQuality()) {
+    if (!_connectSimple()) {
         return false;
     }
 
@@ -632,6 +605,42 @@ bool Sodaq_3Gbee::connect()
     }
 
     // If we got this far we succeeded
+    return true;
+}
+
+bool Sodaq_3Gbee::_connectSimple()
+{
+    if (!on()) {
+        return false;
+    }
+
+    switchEchoOff();
+
+    // switch off the +UMWI URCs
+    // should we move this to switchEchoOff()
+    // or some other location?
+    println("AT+UMWI=0");
+    readResponse();
+
+    // if supported by target application, change the baudrate
+    if (_baudRateChangeCallbackPtr) {
+        println("AT+IPR=" STR(HIGH_BAUDRATE));
+        if (readResponse() != ResponseOK) {
+            return false;
+        }
+
+        _baudRateChangeCallbackPtr(HIGH_BAUDRATE);
+        sodaq_wdt_safe_delay(1000); // wait for everything to be stable again
+    }
+
+    if (!doInitialCommands()) {
+        return false;
+    }
+
+    if (!waitForSignalQuality()) {
+        return false;
+    }
+
     return true;
 }
 
