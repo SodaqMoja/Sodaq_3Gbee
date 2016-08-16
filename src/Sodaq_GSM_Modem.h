@@ -152,8 +152,7 @@ public:
     virtual bool sendAPN(const char* apn, const char* username, const char* password) = 0;
 
     // Turns on and initializes the modem, then connects to the network and activates the data connection.
-    virtual bool _connect(const char* apn, const char* username, const char* password) = 0;
-    bool connect();
+    virtual bool connect() = 0;
 
     // Disconnects the modem from the network.
     virtual bool disconnect() = 0;

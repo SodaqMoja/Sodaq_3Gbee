@@ -51,7 +51,7 @@ public:
     PSDAuthType_e numToPSDAuthType(int8_t i);
 
     // Turns on and initializes the modem, then connects to the network and activates the data connection.
-    bool _connect(const char* apn, const char* username, const char* password);
+    bool connect();
 
     // Disconnects the modem from the network.
     bool disconnect();
@@ -242,8 +242,9 @@ public:
     // Selecting the best network
     bool deregisterNetwork(uint32_t timeout);
     bool getOperators(String & listOfOperators);
-    bool getNthOperator(const String & listOfOperators, size_t nth, String & oper_long, size_t & status);
+    bool getNthOperator(const String & listOfOperators, size_t nth, String & oper_long, String & oper_num, size_t & status);
     bool selectOperator(const String & oper_long, uint32_t timeout);
+    bool selectOperatorNum(const String & oper_num, uint32_t timeout);
 
 protected:
     // Sets the apn, apn username and apn password to the modem.

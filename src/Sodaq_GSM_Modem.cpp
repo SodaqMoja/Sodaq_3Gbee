@@ -298,9 +298,15 @@ void Sodaq_GSM_Modem::setModemStream(Stream& stream)
 
 void Sodaq_GSM_Modem::setApn(const char * apn, const char * user, const char * pass)
 {
-    size_t len = strlen(apn);
-    _apn = static_cast<char*>(realloc(_apn, len + 1));
-    strcpy(_apn, apn);
+    if (apn) {
+        if (!_apn || strcmp(_apn, apn) != 0) {
+            size_t len = strlen(apn);
+            _apn = static_cast<char*>(realloc(_apn, len + 1));
+            strcpy(_apn, apn);
+        }
+    } else {
+        // Should we release the memory?
+    }
     if (user) {
         setApnUser(user);
     }
@@ -311,21 +317,24 @@ void Sodaq_GSM_Modem::setApn(const char * apn, const char * user, const char * p
 
 void Sodaq_GSM_Modem::setApnUser(const char * user)
 {
-    size_t len = strlen(user);
-    _apnUser = static_cast<char*>(realloc(_apnUser, len + 1));
-    strcpy(_apnUser, user);
+    if (user) {
+        if (!_apnUser || strcmp(_apnUser, user) != 0) {
+            size_t len = strlen(user);
+            _apnUser = static_cast<char*>(realloc(_apnUser, len + 1));
+            strcpy(_apnUser, user);
+        }
+    }
 }
 
 void Sodaq_GSM_Modem::setApnPass(const char * pass)
 {
-    size_t len = strlen(pass);
-    _apnPass = static_cast<char*>(realloc(_apnPass, len + 1));
-    strcpy(_apnPass, pass);
-}
-
-bool Sodaq_GSM_Modem::connect()
-{
-    return _connect(_apn, _apnUser, _apnPass);
+    if (pass) {
+        if (!_apnPass || strcmp(_apnPass, pass) != 0) {
+            size_t len = strlen(pass);
+            _apnPass = static_cast<char*>(realloc(_apnPass, len + 1));
+            strcpy(_apnPass, pass);
+        }
+    }
 }
 
 void Sodaq_GSM_Modem::setPin(const char * pin)
