@@ -45,7 +45,7 @@
 
 #define SODAQ_GSM_TERMINATOR_LEN (sizeof(SODAQ_GSM_TERMINATOR) - 1) // without the NULL terminator
 
-#define SODAQ_GSM_MODEM_DEFAULT_INPUT_BUFFER_SIZE 128
+#define SODAQ_GSM_MODEM_DEFAULT_INPUT_BUFFER_SIZE 250
 
 // Constructor
 Sodaq_GSM_Modem::Sodaq_GSM_Modem() :
@@ -56,12 +56,15 @@ Sodaq_GSM_Modem::Sodaq_GSM_Modem() :
     _apn(0),
     _apnUser(0),
     _apnPass(0),
+    _pin(0),
     _onoff(0),
     _baudRateChangeCallbackPtr(0),
     _appendCommand(false),
     _lastRSSI(0),
     _CSQtime(0),
-    _minSignalQuality(-93)      // -93 dBm
+    _minSignalQuality(-93),      // -93 dBm
+    _echoOff(false),
+    _startOn(0)
 {
     this->_isBufferInitialized = false;
 }
