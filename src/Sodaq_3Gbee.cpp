@@ -549,7 +549,7 @@ PSDAuthType_e Sodaq_3Gbee::numToPSDAuthType(int8_t i)
 // Turns on and initializes the modem, then connects to the network and activates the data connection.
 bool Sodaq_3Gbee::connect()
 {
-    if (!_connectSimple()) {
+    if (!connectSimple()) {
         return false;
     }
 
@@ -608,7 +608,7 @@ bool Sodaq_3Gbee::connect()
     return true;
 }
 
-bool Sodaq_3Gbee::_connectSimple()
+bool Sodaq_3Gbee::connectSimple()
 {
     if (!on()) {
         return false;
@@ -838,46 +838,82 @@ bool Sodaq_3Gbee::selectBestOperator(Stream & verbose_stream)
     String listOfOperators;
     String oper_long;
     String oper_num;
-    size_t status;
+    size_t oper_status;
     uint8_t highest_csq = 0;
     size_t highest_csq_ix = 0;
     int8_t lastRSSI;
     uint8_t lastCSQ;
 
     // Get list of operators
-    // Keep track of highest CSQ.
-    if (!getOperators(listOfOperators)) {
+    uint32_t delay_count = 500;
+    bool found_list = false;
+    for (size_t ix = 0; ix < 5; ++ix) {
+        if (getOperators(listOfOperators)) {
+            found_list = true;
+            break;
+        }
+        sodaq_wdt_safe_delay(delay_count);
+        delay_count += 500;
+    }
+    if (!found_list) {
         verbose_stream.println("ERROR: Unable to get a list of operators");
         return false;
     }
 
+    // Select each and keep track of highest CSQ.
+
     verbose_stream.println(String("List of available operators: ") + listOfOperators);
+    size_t nr_valid_opers = 0;
     for (size_t ix = 0; ; ++ix) {
-        if (getNthOperator(listOfOperators, ix, oper_long, oper_num, status)) {
-            verbose_stream.println();
+        if (getNthOperator(listOfOperators, ix, oper_long, oper_num, oper_status)) {
             verbose_stream.println("=======================");
             verbose_stream.println(String("  operator: ") + oper_long);
             verbose_stream.println(String("    number: ") + oper_num);
-            //debugPrintLn(String("  status: ") + status);
-            if (status == 1 || status == 2) {      // 1: available, 2: current, 3: forbidden
-                if (selectOperatorWithRSSI(oper_long, oper_num, lastRSSI, verbose_stream)) {
-                    lastCSQ = convertRSSI2CSQ(lastRSSI);
-                    verbose_stream.println(String("  RSSI: ") + lastRSSI + "dBm (CSQ: " + lastCSQ + ")");
-                    if (lastCSQ > highest_csq) {
-                        highest_csq = lastCSQ;
-                        highest_csq_ix = ix;
-                    }
-                }
+            //debugPrintLn(String("  status: ") + oper_status);
+            if (oper_status == 1 || oper_status == 2) {      // 1: available, 2: current, 3: forbidden
+                nr_valid_opers++;
+                highest_csq_ix = ix;
             }
         } else {
             // No more operators in the list
             break;
         }
     }
+    verbose_stream.println("=======================");
+    verbose_stream.println(String("Number of available operators: ") + nr_valid_opers);
+    if (nr_valid_opers == 0) {
+        return false;
+    }
 
-    // Select the operator with highest CSQ
+    // Only do a check of all available if we have at least 2 or more
+    if (nr_valid_opers > 1) {
+        for (size_t ix = 0; ; ++ix) {
+            if (getNthOperator(listOfOperators, ix, oper_long, oper_num, oper_status)) {
+                verbose_stream.println();
+                verbose_stream.println("=======================");
+                verbose_stream.println(String("  operator: ") + oper_long);
+                verbose_stream.println(String("    number: ") + oper_num);
+                //debugPrintLn(String("  status: ") + oper_status);
+                if (oper_status == 1 || oper_status == 2) {      // 1: available, 2: current, 3: forbidden
+                    if (selectOperatorWithRSSI(oper_long, oper_num, lastRSSI, verbose_stream)) {
+                        lastCSQ = convertRSSI2CSQ(lastRSSI);
+                        verbose_stream.println(String("  RSSI: ") + lastRSSI + "dBm (CSQ: " + lastCSQ + ")");
+                        if (lastCSQ > highest_csq) {
+                            highest_csq = lastCSQ;
+                            highest_csq_ix = ix;
+                        }
+                    }
+                }
+            } else {
+                // No more operators in the list
+                break;
+            }
+        }
+    }
+
+    // Select the operator with highest CSQ, or the only available operator
     verbose_stream.println();
-    if (!getNthOperator(listOfOperators, highest_csq_ix, oper_long, oper_num, status)) {
+    if (!getNthOperator(listOfOperators, highest_csq_ix, oper_long, oper_num, oper_status)) {
         // Shouldn't happen
         return false;
     }
@@ -885,7 +921,7 @@ bool Sodaq_3Gbee::selectBestOperator(Stream & verbose_stream)
     verbose_stream.println(String("Selecting best operator: \"") + oper_long + '"');
     verbose_stream.println(String("                 number: ") + oper_num);
 
-    if (!(status == 1 || status == 2)) {      // 1: available, 2: current, 3: forbidden
+    if (!(oper_status == 1 || oper_status == 2)) {      // 1: available, 2: current, 3: forbidden
         // Shouldn't happen
         return false;
     }
@@ -986,7 +1022,7 @@ bool Sodaq_3Gbee::getOperators(String & listOfOperators)
     char buffer[250];
     size_t buf_size = sizeof(buffer);
     buffer[0] = '\0';
-    bool retval;
+    ResponseTypes retval;
     retval = readResponse<char, size_t>(_nakedStringParser, buffer, &buf_size, NULL, 120000);
     if (retval == ResponseOK) {
         listOfOperators = buffer;
