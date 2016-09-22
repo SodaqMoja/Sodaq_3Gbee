@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "Sodaq_wdt.h"
+#include <Sodaq_wdt.h>
 
 #include "Sodaq_3Gbee.h"
 
