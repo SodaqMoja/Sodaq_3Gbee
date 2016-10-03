@@ -228,11 +228,14 @@ public:
     // Sends the given buffer through the given socket.
     // Returns true if successful.
     virtual bool socketSend(uint8_t socket, const uint8_t* buffer, size_t size) = 0;
-    
+
     // Reads data from the given socket into the given buffer.
     // Returns the number of bytes written to the buffer.
     virtual size_t socketReceive(uint8_t socket, uint8_t* buffer, size_t size) = 0;
-    
+
+    // Returns the number of bytes pending in the read buffer of the given socket .
+    virtual size_t socketBytesPending(uint8_t socket) = 0;
+
     // Closes the given socket.
     // Returns true if successful.
     virtual bool closeSocket(uint8_t socket) = 0;
@@ -255,6 +258,9 @@ public:
     // Receive data via TCP
     // This is merely a convenience wrapper which can use socket functions.
     virtual bool receiveDataTCP(uint8_t *data, size_t data_len, uint16_t timeout=4000) = 0;
+
+    // Set a handler to be called when URC
+    void setTCPClosedHandler(void (*handler)(void)) { _tcpClosedHandler = handler; }
 
     // ==== HTTP
 
@@ -317,7 +323,9 @@ public:
     virtual bool openMQTT(const char * server, uint16_t port = 1883) = 0;
     virtual bool closeMQTT(bool switchOff=true) = 0;
     virtual bool sendMQTTPacket(uint8_t * pckt, size_t len) = 0;
-    virtual bool receiveMQTTPacket(uint8_t * pckt, size_t expected_len) = 0;
+    virtual size_t receiveMQTTPacket(uint8_t * pckt, size_t size, uint32_t timeout = 20000) = 0;
+    virtual size_t availableMQTTPacket() = 0;
+    virtual bool isAliveMQTT() = 0;
 
 protected:
     // The stream that communicates with the device.
@@ -325,6 +333,7 @@ protected:
 
     // The (optional) stream to show debug information.
     Stream* _diagStream;
+    bool _disableDiag;
 
     // The size of the input buffer. Equals SODAQ_GSM_MODEM_DEFAULT_INPUT_BUFFER_SIZE
     // by default or (optionally) a user-defined value when using USE_DYNAMIC_BUFFER.
@@ -374,6 +383,10 @@ protected:
 
     // Keep track when connect started. Use this to record various status changes.
     uint32_t _startOn;
+
+    // A call-back function to be called when the TCP is closed by the remote
+    // Usually this comes in via URC's
+    void (*_tcpClosedHandler)(void);
 
     // Initializes the input buffer and makes sure it is only initialized once.
     // Safe to call multiple times.

@@ -137,6 +137,9 @@ public:
     // NOTE: if the modem hasn't reported available data, it blocks for up to 10 seconds waiting.
     size_t socketReceive(uint8_t socket, uint8_t* buffer, size_t size);
 
+    // Returns the number of bytes pending in the read buffer of the given socket .
+    size_t socketBytesPending(uint8_t socket);
+
     // Closes the given socket.
     // Returns true if successful.
     bool closeSocket(uint8_t socket);
@@ -228,7 +231,9 @@ public:
     bool openMQTT(const char * server, uint16_t port = 1883);
     bool closeMQTT(bool switchOff=true);
     bool sendMQTTPacket(uint8_t * pckt, size_t len);
-    bool receiveMQTTPacket(uint8_t * pckt, size_t expected_len);
+    size_t receiveMQTTPacket(uint8_t * pckt, size_t size, uint32_t timeout = 20000);
+    size_t availableMQTTPacket();
+    bool isAliveMQTT();
 
     size_t readFile(const char* filename, uint8_t* buffer, size_t size);
 

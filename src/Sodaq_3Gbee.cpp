@@ -29,8 +29,8 @@
 #define ARRAY_SIZE(a) (sizeof(a)/sizeof(a[0]))
 
 #ifdef DEBUG
-#define debugPrintLn(...) { if (this->_diagStream) this->_diagStream->println(__VA_ARGS__); }
-#define debugPrint(...) { if (this->_diagStream) this->_diagStream->print(__VA_ARGS__); }
+#define debugPrintLn(...) { if (!this->_disableDiag && this->_diagStream) this->_diagStream->println(__VA_ARGS__); }
+#define debugPrint(...) { if (!this->_disableDiag && this->_diagStream) this->_diagStream->print(__VA_ARGS__); }
 #warning "Debug mode is ON"
 #else
 #define debugPrintLn(...)
@@ -90,6 +90,7 @@ Sodaq_3Gbee::Sodaq_3Gbee()
     _host_name[0] = 0;
     _echoOff = false;
     _flushEverySend = false;
+    _foundUUPSDD = false;
 }
 
 bool Sodaq_3Gbee::startsWith(const char* pre, const char* str)
@@ -123,6 +124,9 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
             if (outSize) {
                 *outSize = count;
             }
+            if (_disableDiag && strncmp(buffer, "OK", 2) != 0) {
+                _disableDiag = false;
+            }
 
             debugPrint("[rdResp]: ");
             debugPrintLn(buffer);
@@ -137,10 +141,11 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
                 debugPrint(socket_nr);
                 debugPrint(": ");
                 debugPrint(param2);
-                debugPrintLn("bytes pending");
+                debugPrintLn(" bytes pending");
                 if (socket_nr < ARRAY_SIZE(_socketPendingBytes)) {
                     _socketPendingBytes[socket_nr] = nr_bytes;
                 }
+                continue;
             }
             else if (sscanf(buffer, "+UUSOCL: %d", &param1) == 1) {
                 uint16_t socket_nr = param1;
@@ -151,7 +156,15 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
                     debugPrintLn("closed by remote");
 
                     _socketClosedBit[socket_nr] = true;
+                    if (socket_nr == _openTCPsocket) {
+                        _openTCPsocket = -1;
+                        // Report this other software layers
+                        if (_tcpClosedHandler) {
+                            _tcpClosedHandler();
+                        }
+                    }
                 }
+                continue;
             }
             else if (sscanf(buffer, "+UUHTTPCR: 0, %d, %d", &param1, &param2) == 2) {
                 int requestType = _httpModemIndexToRequestType(static_cast<uint8_t>(param1));
@@ -170,6 +183,7 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
                 } else {
                     // Unknown type
                 }
+                continue;
             }
             else if (sscanf(buffer, "+UUFTPCR: %d, %d", &param1, &param2) == 2) {
                 debugPrint("FTP Result for command ");
@@ -179,6 +193,7 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
 
                 ftpCommandURC[0] = static_cast<uint8_t>(param1);
                 ftpCommandURC[1] = static_cast<uint8_t>(param2);
+                continue;
             }
             else if (sscanf(buffer, "+UUPSDD: %d", &param1) == 1) {
                 debugPrint("UUPSDD profile: ");
@@ -197,6 +212,7 @@ ResponseTypes Sodaq_3Gbee::readResponse(char* buffer, size_t size,
                 continue; // skip echoed back command
             }
             
+            _disableDiag = false;
             if (startsWith(STR_RESPONSE_OK, buffer)) {
                 return ResponseOK;
             }
@@ -337,6 +353,7 @@ void Sodaq_3Gbee::cleanupTempFiles()
 // Returns true if the modem replies to "AT" commands without timing out.
 bool Sodaq_3Gbee::isAlive()
 {
+    _disableDiag = true;
     println(STR_AT);
 
     return (readResponse(NULL, 450) == ResponseOK);
@@ -1658,8 +1675,13 @@ size_t Sodaq_3Gbee::socketReceive(uint8_t socket, uint8_t* buffer, size_t size)
 
     // if there are no data available yet, block for some seconds while checking
     uint32_t start = millis();
-    while (_socketPendingBytes[socket] == 0 && isAlive() && !is_timedout(start, 10000)) {
-        delay(5);
+    uint32_t delay_count = 50;
+    while (_socketPendingBytes[socket] == 0 && !is_timedout(start, 10000)) {
+        isAlive();
+        sodaq_wdt_safe_delay(delay_count);
+        if (delay_count < 2000) {
+            delay_count += 250;
+        }
     }
 
     size_t pending = _socketPendingBytes[socket];
@@ -1701,6 +1723,11 @@ size_t Sodaq_3Gbee::socketReceive(uint8_t socket, uint8_t* buffer, size_t size)
     return 0;
 }
 
+size_t Sodaq_3Gbee::socketBytesPending(uint8_t socket)
+{
+    return _socketPendingBytes[socket];
+}
+
 // Closes the given socket.
 // Returns true if successful.
 bool Sodaq_3Gbee::closeSocket(uint8_t socket)
@@ -1725,7 +1752,6 @@ void Sodaq_3Gbee::waitForSocketClose(uint8_t socket, uint32_t timeout)
     debugPrintLn(socket);
 
     uint32_t start = millis();
-
     while (isAlive() && (!_socketClosedBit[socket]) && (!is_timedout(start, timeout))) {
         delay(5);
     }
@@ -1794,7 +1820,7 @@ bool Sodaq_3Gbee::openTCP(const char *apn, const char *apnuser, const char *apnp
             // IP_t ip = getHostIP(server);
             _openTCPsocket = createSocket(TCP);
             // TODO Use ip instead of hostname
-            if (connectSocket(_openTCPsocket, server, port)) {
+            if (_openTCPsocket >= 0 && connectSocket(_openTCPsocket, server, port)) {
                 retval = true;
             }
         } else {
@@ -1814,7 +1840,7 @@ bool Sodaq_3Gbee::openTCP(const char *server, int port, bool transMode)
             // IP_t ip = getHostIP(server);
             _openTCPsocket = createSocket(TCP);
             // TODO Use ip instead of hostname
-            if (connectSocket(_openTCPsocket, server, port)) {
+            if (_openTCPsocket >= 0 && connectSocket(_openTCPsocket, server, port)) {
                 retval = true;
             }
         } else {
@@ -2417,9 +2443,62 @@ bool Sodaq_3Gbee::sendMQTTPacket(uint8_t * pckt, size_t len)
     return sendDataTCP(pckt, len);
 }
 
-bool Sodaq_3Gbee::receiveMQTTPacket(uint8_t * pckt, size_t expected_len)
+/*
+ * Read the MQTT packet
+ *
+ * \returns The number of bytes in the packet. This can be larger than what is stored in the buffer.
+ * Return 0 if it failed to read the packet.
+ */
+size_t Sodaq_3Gbee::receiveMQTTPacket(uint8_t * pckt, size_t size, uint32_t timeout)
 {
-    return receiveDataTCP(pckt, expected_len);
+    // TODO While loop until packet received, or timed out
+    isAlive();
+    if (_openTCPsocket < 0) {
+        return 0;
+    }
+    size_t retval = 0;
+    uint32_t start = millis();
+    while (!is_timedout(start, timeout)) {
+        if (_openTCPsocket < 0) {
+            break;
+        }
+        size_t nrbytes = socketBytesPending(_openTCPsocket);
+        if (nrbytes > 0) {
+            size_t read_len = nrbytes;
+            if (nrbytes > size) {
+                read_len = size;
+                // TODO What do we do with the remaining bytes after we have read this amount?
+            }
+            if (receiveDataTCP(pckt, read_len)) {
+                retval = nrbytes;
+                break;
+            }
+        }
+    }
+    return retval;
+}
+
+/*
+ * Is the MQTT connection alive?
+ */
+bool Sodaq_3Gbee::isAliveMQTT()
+{
+    return _openTCPsocket >= 0;
+}
+
+/*
+ * Read the MQTT packet
+ *
+ * \returns The number of bytes available in a received packet.
+ * Return 0 if no packet is available.
+ */
+size_t Sodaq_3Gbee::availableMQTTPacket()
+{
+    isAlive();
+    if (_openTCPsocket < 0) {
+        return 0;
+    }
+    return socketBytesPending(_openTCPsocket);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

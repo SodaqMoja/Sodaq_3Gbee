@@ -23,8 +23,8 @@
 #define DEBUG
 
 #ifdef DEBUG
-#define debugPrintLn(...) { if (this->_diagStream) this->_diagStream->println(__VA_ARGS__); }
-#define debugPrint(...) { if (this->_diagStream) this->_diagStream->print(__VA_ARGS__); }
+#define debugPrintLn(...) { if (!this->_disableDiag && this->_diagStream) this->_diagStream->println(__VA_ARGS__); }
+#define debugPrint(...) { if (!this->_disableDiag && this->_diagStream) this->_diagStream->print(__VA_ARGS__); }
 #warning "Debug mode is ON"
 #else
 #define debugPrintLn(...)
@@ -51,6 +51,7 @@
 Sodaq_GSM_Modem::Sodaq_GSM_Modem() :
     _modemStream(0),
     _diagStream(0),
+    _disableDiag(false),
     _inputBufferSize(SODAQ_GSM_MODEM_DEFAULT_INPUT_BUFFER_SIZE),
     _inputBuffer(0),
     _apn(0),
@@ -64,7 +65,8 @@ Sodaq_GSM_Modem::Sodaq_GSM_Modem() :
     _CSQtime(0),
     _minSignalQuality(-93),      // -93 dBm
     _echoOff(false),
-    _startOn(0)
+    _startOn(0),
+    _tcpClosedHandler(0)
 {
     this->_isBufferInitialized = false;
 }
