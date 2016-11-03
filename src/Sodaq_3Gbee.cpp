@@ -578,7 +578,7 @@ bool Sodaq_3Gbee::connect()
     // NOTE: Default +URAT = 1,2 i.e. prefer UMTS, fallback to GPRS
 
     // cleanup tmp files
-    cleanupTempFiles();
+    //cleanupTempFiles();
 
     // set SMS to text mode
     println("AT+CMGF=1");
