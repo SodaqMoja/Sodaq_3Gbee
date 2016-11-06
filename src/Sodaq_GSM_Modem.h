@@ -160,8 +160,9 @@ public:
     // Returns true if the modem is connected to the network and has an activated data connection.
     virtual bool isConnected() = 0;
 
-    void setMinSignalQuality(int q) { _minSignalQuality = q; }
-    int8_t getMinSignalQuality() const { return _minSignalQuality; }
+    void setMinRSSI(int rssi) { _minRSSI = rssi; }
+    void setMinCSQ(int csq) { _minRSSI = convertCSQ2RSSI(csq); }
+    int8_t getMinRSSI() const { return _minRSSI; }
     uint8_t getCSQtime() const { return _CSQtime; }
     virtual int8_t convertCSQ2RSSI(uint8_t csq) const = 0;
     virtual uint8_t convertRSSI2CSQ(int8_t rssi) const = 0;
@@ -375,8 +376,9 @@ protected:
     // This is the number of second it took when CSQ was record last
     uint8_t _CSQtime;
 
-    // This is the minimum required CSQ to continue making the connection
-    int _minSignalQuality;
+    // This is the minimum required RSSI to continue making the connection
+    // Use convertCSQ2RSSI if you have a CSQ value
+    int _minRSSI;
 
     // Keep track if ATE0 was sent
     bool _echoOff;

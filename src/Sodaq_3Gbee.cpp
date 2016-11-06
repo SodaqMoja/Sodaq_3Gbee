@@ -515,7 +515,7 @@ bool Sodaq_3Gbee::enableAutoRegistration(uint32_t timeout)
 bool Sodaq_3Gbee::waitForSignalQuality(uint32_t timeout)
 {
     uint32_t start = millis();
-    const int8_t minRSSI = -93;         // CSQ 10 <== -113 + 2 * CSQ
+    const int8_t minRSSI = getMinRSSI();
     int8_t rssi;
     uint8_t ber;
 

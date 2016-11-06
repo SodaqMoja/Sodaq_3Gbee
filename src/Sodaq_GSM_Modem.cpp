@@ -63,7 +63,7 @@ Sodaq_GSM_Modem::Sodaq_GSM_Modem() :
     _appendCommand(false),
     _lastRSSI(0),
     _CSQtime(0),
-    _minSignalQuality(-93),      // -93 dBm
+    _minRSSI(-93),      // -93 dBm
     _echoOff(false),
     _startOn(0),
     _tcpClosedHandler(0)
