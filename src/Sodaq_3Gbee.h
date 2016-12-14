@@ -114,6 +114,10 @@ public:
     // Returns the IP of the given host (nslookup).
     IP_t getHostIP(const char* host);
 
+    // Returns the sent and received counters
+    bool getSessionCounters(uint32_t* sentCnt, uint32_t* recvCnt);
+    //bool getTotalCounters(uint32_t* sentCnt, uint32_t* recvCnt);
+
     // ==== Sockets
 
     // Creates a new socket for the given protocol, optionally bound to the given localPort.
@@ -361,6 +365,7 @@ private:
     static ResponseTypes _ulstfileParser(ResponseTypes& response, const char* buffer, size_t size, uint32_t* filesize, uint8_t* dummy);
     static ResponseTypes _cmgrParser(ResponseTypes& response, const char* buffer, size_t size, char* phoneNumber, char* smsBuffer);
     static ResponseTypes _cmglParser(ResponseTypes& response, const char* buffer, size_t size, int* indexList, size_t* indexListSize);
+    static ResponseTypes _ugcntrdParser(ResponseTypes& response, const char* buffer, size_t size, uint32_t* sentCnt, uint32_t* recvCnt);
 
     String getValueAt(String data, char separator, int index);
 };

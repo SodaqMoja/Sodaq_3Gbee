@@ -216,6 +216,10 @@ public:
     // Returns the IP of the given host (nslookup).
     virtual IP_t getHostIP(const char* host) = 0;
 
+    // Returns the sent and received counters
+    virtual bool getSessionCounters(uint32_t* sent_count, uint32_t* recv_count) = 0;
+    //virtual bool getTotalCounters(uint32_t* sent_count, uint32_t* recv_count) = 0;
+
     // ==== Sockets
 
     // Creates a new socket for the given protocol, optionally bound to the given localPort.

@@ -1476,6 +1476,40 @@ IP_t Sodaq_3Gbee::getHostIP(const char* host)
     return NO_IP_ADDRESS;
 }
 
+bool Sodaq_3Gbee::getSessionCounters(uint32_t* sentCnt, uint32_t* recvCnt)
+{
+    println("AT+UGCNTRD");
+
+    if (readResponse<uint32_t, uint32_t>(_ugcntrdParser, sentCnt, recvCnt) == ResponseOK) {
+        return true;
+    }
+
+    return false;
+}
+
+/*
+ * +UGCNTRD: <cid>,<sent_sess_bytes>,<received_sess_bytes>,<sent_total_bytes>,<received_total_bytes>
+ */
+ResponseTypes Sodaq_3Gbee::_ugcntrdParser(ResponseTypes& response, const char* buffer, size_t size,
+        uint32_t* sentCnt, uint32_t* recvCnt)
+{
+    if (!sentCnt || !recvCnt) {
+        return ResponseError;
+    }
+
+    long int value1;
+    long int value2;
+
+    if (sscanf(buffer, "+UGCNTRD: %*d,%*d,%*d,%ld,%ld", &value1, &value2) == 2) {
+        *sentCnt = value1;
+        *recvCnt = value2;
+
+        return ResponseEmpty;
+    }
+
+    return ResponseError;
+}
+
 // Creates a new socket for the given protocol, optionally bound to the given localPort.
 // Returns the index of the socket created or -1 in case of error.
 int Sodaq_3Gbee::createSocket(Protocols protocol, uint16_t localPort)
