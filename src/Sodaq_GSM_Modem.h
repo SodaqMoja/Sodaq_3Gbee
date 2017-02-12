@@ -68,7 +68,7 @@ enum HttpRequestTypes {
     HEAD,
     DELETE,
     PUT,
-    HttpRequestTypesMAX = PUT,
+    HttpRequestTypesMAX
 };
 
 // FTP mode.

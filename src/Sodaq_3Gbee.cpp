@@ -1943,7 +1943,7 @@ size_t Sodaq_3Gbee::httpRequest(const char* server, uint16_t port,
 
     deleteFile(DEFAULT_HTTP_RECEIVE_TMP_FILENAME); // cleanup the file first (if exists)
 
-    if (requestType > HttpRequestTypesMAX) {
+    if (requestType >= HttpRequestTypesMAX) {
         debugPrintLn(DEBUG_STR_ERROR "Unknown request type!");
         return 0;
     }
