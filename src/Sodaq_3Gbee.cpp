@@ -2078,124 +2078,6 @@ int Sodaq_3Gbee::_httpModemIndexToRequestType(uint8_t modemIndex)
     return (modemIndex < sizeof(mapping)) ? mapping[modemIndex] : -1;
 }
 
-// no string termination
-size_t Sodaq_3Gbee::readFile(const char* filename, uint8_t* buffer, size_t size)
-{
-    // TODO escape filename characters { '"', ',', }
-    
-    //sanity check
-    if (!buffer || size == 0) {
-        return 0;
-    }
-    
-    // first, make sure the buffer is sufficient
-    print("AT+ULSTFILE=2,\"");
-    print(filename);
-    println("\"");
-
-    uint32_t filesize = 0;
-
-    if ((readResponse<uint32_t, uint8_t>(_ulstfileParser, &filesize, NULL) != ResponseOK) || (filesize > size)) {
-        debugPrintLn(DEBUG_STR_ERROR "The buffer is not big enough to store the file or the file was not found!");
-
-        return 0;
-    }
-
-    print("AT+URDFILE=\"");
-    print(filename);
-    println("\"");
-
-    // override normal parsing process and explicitly read characters here 
-    // to be able to also read terminator characters within files
-    char checkChar = 0;
-    size_t len = 0;
-
-    // reply identifier
-    len = readBytesUntil(' ', _inputBuffer, _inputBufferSize);
-    if (len == 0 || strstr(_inputBuffer, "+URDFILE:") == NULL) {
-        debugPrintLn(DEBUG_STR_ERROR "+URDFILE literal is missing!");
-        goto error;
-    }
-
-    // filename
-    len = readBytesUntil(',', _inputBuffer, _inputBufferSize);
-    // TODO check filename after removing quotes and escaping chars
-    //if (len == 0 || strstr(_inputBuffer, filename)) {
-    //    debugPrintLn(DEBUG_STR_ERROR "Filename reported back is not correct!");
-    //    return 0;
-    //}
-
-    // filesize
-    len = readBytesUntil(',', _inputBuffer, _inputBufferSize);
-    filesize = 0; // reset the var before reading from reply string
-    if (sscanf(_inputBuffer, "%lu", &filesize) != 1) {
-        debugPrintLn(DEBUG_STR_ERROR "Could not parse the file size!");
-        goto error;
-    }
-    if (filesize == 0 || filesize > size) {
-        debugPrintLn(DEBUG_STR_ERROR "Size error!");
-        goto error;
-    }
-
-    // opening quote character
-    checkChar = timedRead();
-    if (checkChar != '"') {
-        debugPrintLn(DEBUG_STR_ERROR "Missing starting character (quote)!");
-        goto error;
-    }
-
-    // actual file buffer, written directly to the provided result buffer
-    len = readBytes(buffer, filesize);
-    if (len != filesize) {
-        debugPrintLn(DEBUG_STR_ERROR "File size error!");
-        goto error;
-    }
-
-    // closing quote character
-    checkChar = timedRead();
-    if (checkChar != '"') {
-        debugPrintLn(DEBUG_STR_ERROR "Missing termination character (quote)!");
-        goto error;
-    }
-
-    // read final OK response from modem and return the filesize
-    if (readResponse() == ResponseOK) {
-        return filesize;
-    }
-
-error:
-    return 0;
-}
-
-bool Sodaq_3Gbee::writeFile(const char* filename, const uint8_t* buffer, size_t size)
-{
-    // TODO escape filename characters
-    print("AT+UDWNFILE=\"");
-    print(filename);
-    print("\",");
-    println(size);
-
-    if (readResponse() == ResponsePrompt) {
-        for (size_t i = 0; i < size; i++) {
-            writeByte(buffer[i]);
-        }
-
-        return (readResponse() == ResponseOK);
-    }
-
-    return false;
-}
-
-bool Sodaq_3Gbee::deleteFile(const char* filename)
-{
-    // TODO escape filename characters
-    print("AT+UDELFILE=\"");
-    print(filename);
-    println("\"");
-
-    return (readResponse() == ResponseOK);
-}
-
 // Opens an FTP connection.
 bool Sodaq_3Gbee::openFtpConnection(const char* server, const char* username, const char* password, FtpModes ftpMode)
 {
@@ -2533,6 +2415,129 @@ size_t Sodaq_3Gbee::availableMQTTPacket()
         return 0;
     }
     return socketBytesPending(_openTCPsocket);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////    UBLOX FILE UTILITIES   /////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+
+// no string termination
+size_t Sodaq_3Gbee::readFile(const char* filename, uint8_t* buffer, size_t size)
+{
+    // TODO escape filename characters { '"', ',', }
+
+    //sanity check
+    if (!buffer || size == 0) {
+        return 0;
+    }
+
+    // first, make sure the buffer is sufficient
+    print("AT+ULSTFILE=2,\"");
+    print(filename);
+    println("\"");
+
+    uint32_t filesize = 0;
+
+    if ((readResponse<uint32_t, uint8_t>(_ulstfileParser, &filesize, NULL) != ResponseOK) || (filesize > size)) {
+        debugPrintLn(DEBUG_STR_ERROR "The buffer is not big enough to store the file or the file was not found!");
+
+        return 0;
+    }
+
+    print("AT+URDFILE=\"");
+    print(filename);
+    println("\"");
+
+    // override normal parsing process and explicitly read characters here
+    // to be able to also read terminator characters within files
+    char checkChar = 0;
+    size_t len = 0;
+
+    // reply identifier
+    len = readBytesUntil(' ', _inputBuffer, _inputBufferSize);
+    if (len == 0 || strstr(_inputBuffer, "+URDFILE:") == NULL) {
+        debugPrintLn(DEBUG_STR_ERROR "+URDFILE literal is missing!");
+        goto error;
+    }
+
+    // filename
+    len = readBytesUntil(',', _inputBuffer, _inputBufferSize);
+    // TODO check filename after removing quotes and escaping chars
+    //if (len == 0 || strstr(_inputBuffer, filename)) {
+    //    debugPrintLn(DEBUG_STR_ERROR "Filename reported back is not correct!");
+    //    return 0;
+    //}
+
+    // filesize
+    len = readBytesUntil(',', _inputBuffer, _inputBufferSize);
+    filesize = 0; // reset the var before reading from reply string
+    if (sscanf(_inputBuffer, "%lu", &filesize) != 1) {
+        debugPrintLn(DEBUG_STR_ERROR "Could not parse the file size!");
+        goto error;
+    }
+    if (filesize == 0 || filesize > size) {
+        debugPrintLn(DEBUG_STR_ERROR "Size error!");
+        goto error;
+    }
+
+    // opening quote character
+    checkChar = timedRead();
+    if (checkChar != '"') {
+        debugPrintLn(DEBUG_STR_ERROR "Missing starting character (quote)!");
+        goto error;
+    }
+
+    // actual file buffer, written directly to the provided result buffer
+    len = readBytes(buffer, filesize);
+    if (len != filesize) {
+        debugPrintLn(DEBUG_STR_ERROR "File size error!");
+        goto error;
+    }
+
+    // closing quote character
+    checkChar = timedRead();
+    if (checkChar != '"') {
+        debugPrintLn(DEBUG_STR_ERROR "Missing termination character (quote)!");
+        goto error;
+    }
+
+    // read final OK response from modem and return the filesize
+    if (readResponse() == ResponseOK) {
+        return filesize;
+    }
+
+error:
+    return 0;
+}
+
+bool Sodaq_3Gbee::writeFile(const char* filename, const uint8_t* buffer, size_t size)
+{
+    // TODO escape filename characters
+    print("AT+UDWNFILE=\"");
+    print(filename);
+    print("\",");
+    println(size);
+
+    if (readResponse() == ResponsePrompt) {
+        for (size_t i = 0; i < size; i++) {
+            print(buffer[i]);
+        }
+
+        return (readResponse() == ResponseOK);
+    }
+
+    return false;
+}
+
+bool Sodaq_3Gbee::deleteFile(const char* filename)
+{
+    // TODO escape filename characters
+    print("AT+UDELFILE=\"");
+    print(filename);
+    println("\"");
+
+    return (readResponse() == ResponseOK);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
