@@ -2013,15 +2013,26 @@ size_t Sodaq_3Gbee::httpRequest(const char* server, uint16_t port,
     // This loop relies on readResponse being called via isAlive()
     uint32_t start = millis();
     uint32_t delay_count = 50;
-    while ((_httpRequestSuccessBit[requestType] == TriBoolUndefined) && !is_timedout(start, 30000)) {
+    while ((_httpRequestSuccessBit[requestType] == TriBoolUndefined) && !is_timedout(start, 60000)) {
         isAlive();
         sodaq_wdt_safe_delay(delay_count);
-        delay_count += 250;
+        // Next time wait a little longer, but not longer than 5 seconds
+        if (delay_count < 5000) {
+            delay_count += 250;
+        }
     }
 
     if (_httpRequestSuccessBit[requestType] == TriBoolTrue) {
-        if (responseBuffer && responseSize > 0) {
+        uint32_t file_size;
+        if (!getFileSize(DEFAULT_HTTP_RECEIVE_TMP_FILENAME, file_size)) {
+            debugPrintLn(DEBUG_STR_ERROR "Could not determine file size");
+            return 0;
+        }
+        if (responseBuffer && responseSize > 0 && file_size < responseSize) {
             return readFile(DEFAULT_HTTP_RECEIVE_TMP_FILENAME, (uint8_t*)responseBuffer, responseSize);
+        } else {
+            // On AVR this can give size_t overflow
+            return file_size;
         }
     }
     else if (_httpRequestSuccessBit[requestType] == TriBoolFalse) {
@@ -2034,20 +2045,6 @@ size_t Sodaq_3Gbee::httpRequest(const char* server, uint16_t port,
     }
 
     return 0;
-}
-
-ResponseTypes Sodaq_3Gbee::_ulstfileParser(ResponseTypes& response, const char* buffer, size_t size,
-        uint32_t* filesize, uint8_t* dummy)
-{
-    if (!filesize) {
-        return ResponseError;
-    }
-
-    if (sscanf(buffer, "+ULSTFILE: %lu", filesize) == 1) {
-        return ResponseEmpty;
-    }
-
-    return ResponseError;
 }
 
 // maps the given requestType to the index the modem recognizes, -1 if error
@@ -2422,7 +2419,9 @@ size_t Sodaq_3Gbee::availableMQTTPacket()
 ////////////////////////////////////////////////////////////////////////////////
 
 
-// no string termination
+/**
+ * Read a file from the UBlox device
+ */
 size_t Sodaq_3Gbee::readFile(const char* filename, uint8_t* buffer, size_t size)
 {
     // TODO escape filename characters { '"', ',', }
@@ -2433,15 +2432,14 @@ size_t Sodaq_3Gbee::readFile(const char* filename, uint8_t* buffer, size_t size)
     }
 
     // first, make sure the buffer is sufficient
-    print("AT+ULSTFILE=2,\"");
-    print(filename);
-    println("\"");
-
     uint32_t filesize = 0;
+    if (!getFileSize(filename, filesize)) {
+        debugPrintLn(DEBUG_STR_ERROR "Could not determine file size");
+        return 0;
+    }
 
-    if ((readResponse<uint32_t, uint8_t>(_ulstfileParser, &filesize, NULL) != ResponseOK) || (filesize > size)) {
-        debugPrintLn(DEBUG_STR_ERROR "The buffer is not big enough to store the file or the file was not found!");
-
+    if (filesize > size) {
+        debugPrintLn(DEBUG_STR_ERROR "The buffer is not big enough to store the file");
         return 0;
     }
 
@@ -2511,6 +2509,101 @@ error:
     return 0;
 }
 
+/**
+ * Read a file from the UBlox device
+ */
+size_t Sodaq_3Gbee::readFilePartial(const char* filename, uint8_t* buffer, size_t size, uint32_t offset)
+{
+    // TODO escape filename characters { '"', ',', }
+
+    //sanity check
+    if (!buffer || size == 0) {
+        return 0;
+    }
+
+#if 0
+    // Probably no need to read the file size as that should have been done by the caller
+    uint32_t filesize = 0;
+    if (!getFileSize(filename, filesize)) {
+        debugPrintLn(DEBUG_STR_ERROR "Could not determine file size");
+        return 0;
+    }
+
+    if (filesize > size) {
+        debugPrintLn(DEBUG_STR_ERROR "The buffer is not big enough to store the file");
+        return 0;
+    }
+#endif
+
+    print("AT+URDBLOCK=\"");
+    print(filename);
+    print("\",");
+    print(offset);
+    print(",");
+    println(size);
+
+    // override normal parsing process and explicitly read characters here
+    // to be able to also read terminator characters within files
+
+    char quote;
+    size_t len = 0;
+    uint32_t blocksize;
+
+    // reply identifier
+    //   +URDBLOCK: http_last_response_0,86,"..."
+    // where 86 is an example of the size
+    len = readBytesUntil(' ', _inputBuffer, _inputBufferSize);
+    if (len == 0 || strstr(_inputBuffer, "+URDBLOCK:") == NULL) {
+        debugPrintLn(DEBUG_STR_ERROR "+URDBLOCK literal is missing!");
+        goto error;
+    }
+
+    // skip filename
+    len = readBytesUntil(',', _inputBuffer, _inputBufferSize);
+    // TODO check filename. Note, there are no quotes
+
+    // read the number of bytes
+    len = readBytesUntil(',', _inputBuffer, _inputBufferSize);
+    blocksize = 0; // reset the var before reading from reply string
+    if (sscanf(_inputBuffer, "%lu", &blocksize) != 1) {
+        debugPrintLn(DEBUG_STR_ERROR "Could not parse the block size!");
+        goto error;
+    }
+    if (blocksize == 0 || blocksize > size) {
+        debugPrintLn(DEBUG_STR_ERROR "Size error!");
+        goto error;
+    }
+
+    // opening quote character
+    quote = timedRead();
+    if (quote != '"') {
+        debugPrintLn(DEBUG_STR_ERROR "Missing starting character (quote)!");
+        goto error;
+    }
+
+    // actual file buffer, written directly to the provided result buffer
+    len = readBytes(buffer, blocksize);
+    if (len != blocksize) {
+        debugPrintLn(DEBUG_STR_ERROR "File size error!");
+        goto error;
+    }
+
+    // closing quote character
+    quote = timedRead();
+    if (quote != '"') {
+        debugPrintLn(DEBUG_STR_ERROR "Missing termination character (quote)!");
+        goto error;
+    }
+
+    // read final OK response from modem and return the filesize
+    if (readResponse() == ResponseOK) {
+        return blocksize;
+    }
+
+error:
+    return 0;
+}
+
 bool Sodaq_3Gbee::writeFile(const char* filename, const uint8_t* buffer, size_t size)
 {
     // TODO escape filename characters
@@ -2524,7 +2617,7 @@ bool Sodaq_3Gbee::writeFile(const char* filename, const uint8_t* buffer, size_t 
             print(buffer[i]);
         }
 
-        return (readResponse() == ResponseOK);
+        return readResponse() == ResponseOK;
     }
 
     return false;
@@ -2537,7 +2630,70 @@ bool Sodaq_3Gbee::deleteFile(const char* filename)
     print(filename);
     println("\"");
 
-    return (readResponse() == ResponseOK);
+    return readResponse() == ResponseOK;
+}
+
+bool Sodaq_3Gbee::listFiles()
+{
+    // list all files
+    println("AT+ULSTFILE=0");
+
+    // First parse +ULSTFILE: "file1","file2" ...
+    char names[30];
+    size_t names_size = sizeof(names);
+
+    return readResponse<char, size_t>(_ulstfileNamesParser, names, &names_size) == ResponseOK;
+}
+
+ResponseTypes Sodaq_3Gbee::_ulstfileNamesParser(ResponseTypes& response, const char* buffer, size_t size,
+        char* names, size_t* namesSize)
+{
+    if (!names || !namesSize) {
+        return ResponseError;
+    }
+
+    const char *prefix = "+ULSTFILE: ";
+    size_t prefix_len = strlen(prefix);
+    if (strncmp(buffer, prefix, prefix_len) == 0) {
+        memset(names, 0, *namesSize);
+        strncpy(names, buffer, *namesSize - 1);
+        return ResponseEmpty;
+    }
+
+    return ResponseError;
+}
+
+ResponseTypes Sodaq_3Gbee::_ulstfileSizeParser(ResponseTypes& response, const char* buffer, size_t size,
+        uint32_t* filesize, uint8_t* dummy)
+{
+    if (!filesize) {
+        return ResponseError;
+    }
+
+    if (sscanf(buffer, "+ULSTFILE: %lu", filesize) == 1) {
+        return ResponseEmpty;
+    }
+
+    return ResponseError;
+}
+
+bool Sodaq_3Gbee::getRemainingFreeSpace(uint32_t & size)
+{
+    // get free space
+    println("AT+ULSTFILE=1");
+
+    return readResponse<uint32_t, uint8_t>(_ulstfileSizeParser, &size, NULL) == ResponseOK;
+}
+
+bool Sodaq_3Gbee::getFileSize(const char* filename, uint32_t & size)
+{
+    print("AT+ULSTFILE=2,\"");
+    print(filename);
+    println("\"");
+
+    // If the file is not present you'll get:
+    //   +CME ERROR: FILE NOT FOUND
+    return readResponse<uint32_t, uint8_t>(_ulstfileSizeParser, &size, NULL) == ResponseOK;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

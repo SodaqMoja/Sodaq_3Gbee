@@ -182,7 +182,10 @@ public:
     // Creates an HTTP request using the (optional) given buffer and 
     // (optionally) returns the received data.
     // endpoint should include the initial "/".
-    size_t httpRequest(const char* server, uint16_t port, const char* endpoint, HttpRequestTypes requestType = GET, char* responseBuffer = NULL, size_t responseSize = 0, const char* sendBuffer = NULL, size_t sendSize = 0);
+    size_t httpRequest(const char* server, uint16_t port, const char* endpoint,
+            HttpRequestTypes requestType = GET,
+            char* responseBuffer = NULL, size_t responseSize = 0,
+            const char* sendBuffer = NULL, size_t sendSize = 0);
 
     // ==== Ftp
 
@@ -240,10 +243,12 @@ public:
     bool isAliveMQTT();
 
     size_t readFile(const char* filename, uint8_t* buffer, size_t size);
-
+    size_t readFilePartial(const char* filename, uint8_t* buffer, size_t size, uint32_t offset);
     bool writeFile(const char* filename, const uint8_t* buffer, size_t size);
-    
     bool deleteFile(const char* filename);
+    bool listFiles();
+    bool getRemainingFreeSpace(uint32_t & size);
+    bool getFileSize(const char* filename, uint32_t & size);
 
     void clearCachedHostIp() { _host_ip = NO_IP_ADDRESS; }
 
@@ -362,7 +367,10 @@ private:
     static ResponseTypes _nakedStringParser(ResponseTypes& response, const char* buffer, size_t size, char* stringBuffer, size_t* stringBufferSize);
     static ResponseTypes _ccidParser(ResponseTypes& response, const char* buffer, size_t size, char* ccidBuffer, size_t* ccidBufferSize);
     static ResponseTypes _cregParser(ResponseTypes& response, const char* buffer, size_t size, int* networkStatus, uint8_t* dummy);
-    static ResponseTypes _ulstfileParser(ResponseTypes& response, const char* buffer, size_t size, uint32_t* filesize, uint8_t* dummy);
+    static ResponseTypes _ulstfileSizeParser(ResponseTypes& response,
+            const char* buffer, size_t size, uint32_t* filesize, uint8_t* dummy);
+    static ResponseTypes _ulstfileNamesParser(ResponseTypes& response,
+            const char* buffer, size_t size, char* names, size_t* namesSize);
     static ResponseTypes _cmgrParser(ResponseTypes& response, const char* buffer, size_t size, char* phoneNumber, char* smsBuffer);
     static ResponseTypes _cmglParser(ResponseTypes& response, const char* buffer, size_t size, int* indexList, size_t* indexListSize);
     static ResponseTypes _ugcntrdParser(ResponseTypes& response, const char* buffer, size_t size, uint32_t* sentCnt, uint32_t* recvCnt);
