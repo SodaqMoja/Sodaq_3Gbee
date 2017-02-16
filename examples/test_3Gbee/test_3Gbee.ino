@@ -231,15 +231,12 @@ void setup()
 
         {
             // POST
-            char postRawData[] = "testfield=test&someotherfield=test2";
-            char postDataHeaders[] = "User-Agent: HTTPTool/1.0\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: " STR(sizeof(postData)-1) "\r\n";
-            char postData[sizeof(postRawData) + sizeof(postDataHeaders) - 1];
-
-            memcpy(postData, postDataHeaders, sizeof(postDataHeaders)-1);
-            memcpy(postData + sizeof(postDataHeaders) - 1, postRawData, sizeof(postRawData));
+            // defaults to text/plain
+            const char postBody[] = "testfield=test&someotherfield=test2";
 
             char httpBuffer[1024];
-            size_t size = sodaq_3gbee.httpRequest("httpbin.org", 80, "/post", POST, httpBuffer, sizeof(httpBuffer), postData, sizeof(postData));
+            size_t size = sodaq_3gbee.httpRequest("httpbin.org", 80, "/post", POST, httpBuffer, sizeof(httpBuffer), postBody, sizeof(postBody));
+
             printToLen(httpBuffer, size);
         }
 #endif
