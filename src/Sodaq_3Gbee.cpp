@@ -2047,6 +2047,79 @@ size_t Sodaq_3Gbee::httpRequest(const char* server, uint16_t port,
     return 0;
 }
 
+/**
+ * A convenience wrapper function to just a simple HTTP GET
+ *
+ * If the request is handled properly it will return the contents
+ * without the header.
+ * The header is checked for presence of "HTTP/1.1 200 OK" ????
+ * The header is skipped, that is, upto and including two CRLF's,
+ * the remainder is returned in the buffer.
+ */
+uint32_t Sodaq_3Gbee::httpGet(const char* server, uint16_t port, const char* endpoint,
+         char* buffer, size_t bufferSize)
+{
+    uint32_t file_size;
+
+    // First just handle the request and let the file be read into the UBlox file system
+    file_size = httpRequest(server, port, endpoint, GET, 0, 0);
+    if (file_size == 0) {
+        return 0;
+    }
+
+    // Find out the header size
+    uint32_t header_size = httpGetHeaderSize(DEFAULT_HTTP_RECEIVE_TMP_FILENAME);
+    debugPrintLn(String("[httpGet] header size: ") + header_size);
+    if (header_size == 0) {
+        return 0;
+    }
+
+    if (!buffer) {
+        return file_size - header_size;
+    }
+
+    // Fill the buffer starting from the header
+    return sodaq_3gbee.readFilePartial(DEFAULT_HTTP_RECEIVE_TMP_FILENAME, (uint8_t *)buffer, bufferSize, header_size);
+}
+
+uint32_t Sodaq_3Gbee::httpGetHeaderSize(const char * filename)
+{
+    bool status;
+
+    uint32_t file_size;
+    status = sodaq_3gbee.getFileSize(filename, file_size);
+    if (!status) {
+        return 0;
+    }
+
+    int state = 0;      // 0 nothing, 1=CR, 2=CRLF, 3=CRLFCR, 4=CRLFCRLF
+    uint8_t buffer[64];
+    uint32_t offset = 0;
+    while (offset < file_size && state != 4) {
+        size_t len = sizeof(buffer);
+        size_t size;
+        size = sodaq_3gbee.readFilePartial(filename, buffer, sizeof(buffer), offset);
+
+        size_t ix;
+        for (ix = 0; state != 4 && ix < sizeof(buffer); ix++) {
+            if ((state == 0 || state == 2) && buffer[ix] == '\r') {
+                state++;
+            } else if ((state == 1 || state == 3) && buffer[ix] == '\n') {
+                state++;
+            } else {
+                state = 0;
+            }
+        }
+        if (state == 4) {
+            return offset + ix;
+        }
+
+        offset += size;
+    }
+
+    return 0;
+}
+
 // maps the given requestType to the index the modem recognizes, -1 if error
 int Sodaq_3Gbee::_httpRequestTypeToModemIndex(HttpRequestTypes requestType)
 {

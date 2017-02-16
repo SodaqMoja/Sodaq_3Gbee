@@ -187,6 +187,15 @@ public:
             char* responseBuffer = NULL, size_t responseSize = 0,
             const char* sendBuffer = NULL, size_t sendSize = 0);
 
+    // Creates an HTTP GET request and optionally returns the received data.
+    // Note. Endpoint should include the initial "/".
+    // The UBlox device stores the received data in http_last_response_<profile_id>
+    uint32_t httpGet(const char* server, uint16_t port, const char* endpoint,
+             char* buffer, size_t bufferSize);
+
+    // Determine HTTP header size
+    uint32_t httpGetHeaderSize(const char * filename);
+
     // ==== Ftp
 
     // Opens an FTP connection.
