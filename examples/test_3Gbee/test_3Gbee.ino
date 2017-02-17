@@ -6,6 +6,9 @@
 #if defined(ARDUINO_SODAQ_AUTONOMO)
 #define MySerial SerialUSB
 #define MY_BEE_VCC  BEE_VCC
+#elif defined(ARDUINO_SODAQ_ONE)
+#define MySerial SerialUSB
+#define MY_BEE_VCC ENABLE_3G
 #elif defined(ARDUINO_SODAQ_MBILI)
 #define MY_BEE_VCC  -1
 #define MySerial Serial
@@ -20,6 +23,10 @@
 #define APN_PASS NULL
 
 //#define APN "aerea.m2m.com"
+//#define APN_USER NULL
+//#define APN_PASS NULL
+
+//#define APN "live.vodafone.com"
 //#define APN_USER NULL
 //#define APN_PASS NULL
 
@@ -71,13 +78,15 @@ void setup()
 
     sodaq_3gbee.setDiag(MySerial); // optional
     sodaq_3gbee.enableBaudrateChange(changeModemBaudrate); // optional
-    
+
     delay(500);
 
 #if defined(ARDUINO_SODAQ_AUTONOMO)
     sodaq_3gbee.init(Serial1, BEE_VCC, BEEDTR, BEECTS);
 #elif defined(ARDUINO_SODAQ_WDT)
     sodaq_3gbee.init_wdt(Serial1, U2_ON);
+#elif defined(ARDUINO_SODAQ_ONE)
+    sodaq_3gbee.init_wdt(Serial1, ENABLE_3G);
 #elif defined(ARDUINO_SODAQ_MBILI)
     sodaq_3gbee.init(Serial1, -1, BEEDTR, BEECTS);
 #endif
@@ -245,7 +254,7 @@ void setup()
         {
             char loremIpsumParagraph[] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer tempor vestibulum neque, ac consectetur ligula egestas vestibulum. Nullam at diam id magna hendrerit viverra non ut nunc. Vivamus ex leo, lacinia vel congue vel, lacinia at arcu. Donec eu tincidunt ex, porttitor ultrices ante. Praesent porttitor ultricies vehicula. Aliquam erat volutpat. Interdum et malesuada fames ac ante ipsum primis in faucibus. Etiam rhoncus suscipit urna, ut mattis nisl ullamcorper id. Donec lacus leo, sodales eget faucibus eu, tincidunt sit amet lorem. Vivamus non tellus ex. Vivamus eget est eu felis feugiat lobortis. Donec ultricies ultricies placerat. Aenean condimentum quam ut mi convallis, a ultrices mi imperdiet. Curabitur laoreet eu neque vitae porttitor.";
             sodaq_3gbee.openFtpConnection("server", "user", "pass", PassiveMode);
-                
+
             sodaq_3gbee.openFtpFile("test.txt", "/test/test2/test3/");
             sodaq_3gbee.ftpSend(loremIpsumParagraph, sizeof(loremIpsumParagraph));
             sodaq_3gbee.closeFtpFile();
@@ -274,7 +283,7 @@ void setup()
             int count = sodaq_3gbee.getSmsList("ALL", indexes, sizeof(indexes));
             if (count < 0) {
                 MySerial.println("SMS list error!");
-            } 
+            }
             else {
                 for (int i = 0; i < count; i++) {
                     MySerial.println(indexes[i]);
