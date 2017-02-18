@@ -41,9 +41,9 @@
 #define DEFAULT_PROFILE "0"
 #define HIGH_BAUDRATE 57600
 #define MAX_SOCKET_BUFFER 512
-#define DEFAULT_HTTP_SEND_TMP_FILENAME "http_tmp_put_0"
-#define DEFAULT_HTTP_RECEIVE_TMP_FILENAME "http_last_response_0"
-#define DEFAULT_FTP_TMP_FILENAME "ftp_tmp_file"
+#define HTTP_SEND_TMP_FILENAME "http_tmp_put_0"
+#define HTTP_RECEIVE_FILENAME "http_last_response_0"
+#define FTP_TMP_FILENAME "ftp_tmp_file"
 #define CTRL_Z '\x1A'
 
 #define NOW (uint32_t)millis()
@@ -345,9 +345,9 @@ void Sodaq_3Gbee::resetFtpDirectoryIfNeeded()
 
 void Sodaq_3Gbee::cleanupTempFiles()
 {
-    deleteFile(DEFAULT_FTP_TMP_FILENAME);
-    deleteFile(DEFAULT_HTTP_RECEIVE_TMP_FILENAME);
-    deleteFile(DEFAULT_HTTP_SEND_TMP_FILENAME);
+    deleteFile(FTP_TMP_FILENAME);
+    deleteFile(HTTP_RECEIVE_FILENAME);
+    deleteFile(HTTP_SEND_TMP_FILENAME);
 }
 
 // Returns true if the modem replies to "AT" commands without timing out.
@@ -1941,7 +1941,7 @@ size_t Sodaq_3Gbee::httpRequest(const char* server, uint16_t port,
         return 0;
     }
 
-    deleteFile(DEFAULT_HTTP_RECEIVE_TMP_FILENAME); // cleanup the file first (if exists)
+    deleteFile(HTTP_RECEIVE_FILENAME); // cleanup the file first (if exists)
 
     if (requestType >= HttpRequestTypesMAX) {
         debugPrintLn(DEBUG_STR_ERROR "Unknown request type!");
@@ -1975,9 +1975,9 @@ size_t Sodaq_3Gbee::httpRequest(const char* server, uint16_t port,
             return 0;
         }
 
-        deleteFile(DEFAULT_HTTP_SEND_TMP_FILENAME); // cleanup the file first (if exists)
+        deleteFile(HTTP_SEND_TMP_FILENAME); // cleanup the file first (if exists)
 
-        if (!writeFile(DEFAULT_HTTP_SEND_TMP_FILENAME, (uint8_t*)sendBuffer, sendSize)) {
+        if (!writeFile(HTTP_SEND_TMP_FILENAME, (uint8_t*)sendBuffer, sendSize)) {
             debugPrintLn(DEBUG_STR_ERROR "Could not create the http tmp file!");
             return 0;
         }
@@ -1990,14 +1990,14 @@ size_t Sodaq_3Gbee::httpRequest(const char* server, uint16_t port,
     print(_httpRequestTypeToModemIndex(requestType));
     print(",\"");
     print(endpoint);
-    print("\",\"\""); // empty filename = default = "http_last_response_0" (DEFAULT_HTTP_RECEIVE_TMP_FILENAME)
+    print("\",\"\""); // empty filename = default = "http_last_response_0" (DEFAULT_HTTP_RECEIVE_FILENAME)
 
     // NOTE: a file that includes the buffer to send has been created already
     if (requestType == PUT) {
-        print(",\"" DEFAULT_HTTP_SEND_TMP_FILENAME "\""); // param1: file from filesystem to send
+        print(",\"" HTTP_SEND_TMP_FILENAME "\""); // param1: file from filesystem to send
     }
     else if (requestType == POST) {
-        print(",\"" DEFAULT_HTTP_SEND_TMP_FILENAME "\""); // param1: file from filesystem to send
+        print(",\"" HTTP_SEND_TMP_FILENAME "\""); // param1: file from filesystem to send
         print(",1"); // param2: content type, 1=text/plain
         // TODO consider making the content type a parameter
     } else {
@@ -2024,12 +2024,12 @@ size_t Sodaq_3Gbee::httpRequest(const char* server, uint16_t port,
 
     if (_httpRequestSuccessBit[requestType] == TriBoolTrue) {
         uint32_t file_size;
-        if (!getFileSize(DEFAULT_HTTP_RECEIVE_TMP_FILENAME, file_size)) {
+        if (!getFileSize(HTTP_RECEIVE_FILENAME, file_size)) {
             debugPrintLn(DEBUG_STR_ERROR "Could not determine file size");
             return 0;
         }
         if (responseBuffer && responseSize > 0 && file_size < responseSize) {
-            return readFile(DEFAULT_HTTP_RECEIVE_TMP_FILENAME, (uint8_t*)responseBuffer, responseSize);
+            return readFile(HTTP_RECEIVE_FILENAME, (uint8_t*)responseBuffer, responseSize);
         } else {
             // On AVR this can give size_t overflow
             return file_size;
@@ -2068,7 +2068,7 @@ uint32_t Sodaq_3Gbee::httpGet(const char* server, uint16_t port, const char* end
     }
 
     // Find out the header size
-    uint32_t header_size = httpGetHeaderSize(DEFAULT_HTTP_RECEIVE_TMP_FILENAME);
+    uint32_t header_size = httpGetHeaderSize(HTTP_RECEIVE_FILENAME);
     debugPrintLn(String("[httpGet] header size: ") + header_size);
     if (header_size == 0) {
         return 0;
@@ -2079,7 +2079,7 @@ uint32_t Sodaq_3Gbee::httpGet(const char* server, uint16_t port, const char* end
     }
 
     // Fill the buffer starting from the header
-    return sodaq_3gbee.readFilePartial(DEFAULT_HTTP_RECEIVE_TMP_FILENAME, (uint8_t *)buffer, bufferSize, header_size);
+    return sodaq_3gbee.readFilePartial(HTTP_RECEIVE_FILENAME, (uint8_t *)buffer, bufferSize, header_size);
 }
 
 uint32_t Sodaq_3Gbee::httpGetHeaderSize(const char * filename)
@@ -2259,14 +2259,14 @@ bool Sodaq_3Gbee::ftpSend(const uint8_t* buffer, size_t size)
         return false;
     }
 
-    deleteFile(DEFAULT_FTP_TMP_FILENAME); // cleanup
+    deleteFile(FTP_TMP_FILENAME); // cleanup
 
-    if (!writeFile(DEFAULT_FTP_TMP_FILENAME, buffer, size)) {
-        deleteFile(DEFAULT_FTP_TMP_FILENAME);
+    if (!writeFile(FTP_TMP_FILENAME, buffer, size)) {
+        deleteFile(FTP_TMP_FILENAME);
         return false;
     }
 
-    print("AT+UFTPC=5,\"" DEFAULT_FTP_TMP_FILENAME "\",\"");
+    print("AT+UFTPC=5,\"" FTP_TMP_FILENAME "\",\"");
     print(ftpFilename);
     println("\"");
 
@@ -2287,17 +2287,17 @@ int Sodaq_3Gbee::ftpReceive(char* buffer, size_t size)
         return 0;
     }
 
-    deleteFile(DEFAULT_FTP_TMP_FILENAME); // cleanup
+    deleteFile(FTP_TMP_FILENAME); // cleanup
 
     print("AT+UFTPC=4,\"");
     print(ftpFilename);
-    println("\",\"" DEFAULT_FTP_TMP_FILENAME "\"");
+    println("\",\"" FTP_TMP_FILENAME "\"");
 
     if ((readResponse() != ResponseOK) || (!waitForFtpCommandResult(4))) {
         return 0;
     }
 
-    return readFile(DEFAULT_FTP_TMP_FILENAME, (uint8_t*)buffer, size);
+    return readFile(FTP_TMP_FILENAME, (uint8_t*)buffer, size);
 }
 
 // Closes the open FTP file.
