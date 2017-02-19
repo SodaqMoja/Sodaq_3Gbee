@@ -84,6 +84,7 @@ Sodaq_3Gbee::Sodaq_3Gbee()
     _psdAuthType = PAT_None;
     ftpDirectoryChangeCounter = 0;
     _openTCPsocket = -1;
+    _httpGetHeaderSize = 0;
     _timeToSocketConnect = 0;
     _timeToSocketClose = 0;
     _host_ip = NO_IP_ADDRESS;
@@ -2068,20 +2069,27 @@ uint32_t Sodaq_3Gbee::httpGet(const char* server, uint16_t port, const char* end
     }
 
     // Find out the header size
-    uint32_t header_size = httpGetHeaderSize(HTTP_RECEIVE_FILENAME);
-    debugPrintLn(String("[httpGet] header size: ") + header_size);
-    if (header_size == 0) {
+    _httpGetHeaderSize = httpGetHeaderSize(HTTP_RECEIVE_FILENAME);
+    debugPrintLn(String("[httpGet] header size: ") + _httpGetHeaderSize);
+    if (_httpGetHeaderSize == 0) {
         return 0;
     }
 
     if (!buffer) {
-        return file_size - header_size;
+        return file_size - _httpGetHeaderSize;
     }
 
     // Fill the buffer starting from the header
-    return sodaq_3gbee.readFilePartial(HTTP_RECEIVE_FILENAME, (uint8_t *)buffer, bufferSize, header_size);
+    return sodaq_3gbee.readFilePartial(HTTP_RECEIVE_FILENAME, (uint8_t *)buffer, bufferSize, _httpGetHeaderSize);
 }
 
+/**
+ * Return the size of the HTTP response header
+ *
+ * This function searches from the start of the file until two CRLFs have
+ * been seen.
+ * The file is left unmodified.
+ */
 uint32_t Sodaq_3Gbee::httpGetHeaderSize(const char * filename)
 {
     bool status;
@@ -2118,6 +2126,18 @@ uint32_t Sodaq_3Gbee::httpGetHeaderSize(const char * filename)
     }
 
     return 0;
+}
+
+size_t Sodaq_3Gbee::httpGetPartial(uint8_t* buffer, size_t size, uint32_t offset)
+{
+    if (_httpGetHeaderSize == 0) {
+        _httpGetHeaderSize = httpGetHeaderSize(HTTP_RECEIVE_FILENAME);
+    }
+    if (_httpGetHeaderSize == 0) {
+        // Don't trust a file without HTTP response header
+        return 0;
+    }
+    return readFilePartial(HTTP_RECEIVE_FILENAME, buffer, size, _httpGetHeaderSize + offset);
 }
 
 // maps the given requestType to the index the modem recognizes, -1 if error

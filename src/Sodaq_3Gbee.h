@@ -196,7 +196,11 @@ public:
     // Determine HTTP header size
     uint32_t httpGetHeaderSize(const char * filename);
 
-    // ==== Ftp
+    // Return a partial result of the previous HTTP Request (GET or POST)
+    // Offset 0 is the byte directly after the HTTP Response header
+    size_t httpGetPartial(uint8_t* buffer, size_t size, uint32_t offset);
+
+    // ==== FTP
 
     // Opens an FTP connection.
     bool openFtpConnection(const char* server, const char* username, const char* password, FtpModes ftpMode);
@@ -318,6 +322,8 @@ private:
     char ftpFilename[256 + 1]; // always null terminated
     uint8_t ftpDirectoryChangeCounter; // counts how many nested directories were changed, to revert on close
     int _openTCPsocket;
+
+    uint32_t _httpGetHeaderSize;
 
     uint32_t _timeToSocketConnect;
     uint32_t _timeToSocketClose;
