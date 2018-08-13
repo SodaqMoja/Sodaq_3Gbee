@@ -2707,7 +2707,7 @@ bool Sodaq_3Gbee::writeFile(const char* filename, const uint8_t* buffer, size_t 
 
     if (readResponse() == ResponsePrompt) {
         for (size_t i = 0; i < size; i++) {
-            print(buffer[i]);
+            writeByte(buffer[i]);
         }
 
         return readResponse() == ResponseOK;
