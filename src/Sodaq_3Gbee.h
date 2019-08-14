@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <Stream.h>
 #include "Sodaq_GSM_Modem.h"
+#include "Sodaq_MQTT_Interface.h"
 
 #define SOCKET_COUNT 7
 
@@ -30,7 +31,7 @@ enum PSDAuthType_e {
 typedef ResponseTypes (*CallbackMethodPtr)(ResponseTypes& response, const char* buffer, size_t size,
         void* parameter, void* parameter2);
 
-class Sodaq_3Gbee: public Sodaq_GSM_Modem {
+class Sodaq_3Gbee: public Sodaq_GSM_Modem, public Sodaq_MQTT_Interface {
 public:
     Sodaq_3Gbee();
     ~Sodaq_3Gbee() {}
@@ -254,6 +255,7 @@ public:
     size_t receiveMQTTPacket(uint8_t * pckt, size_t size, uint32_t timeout = 20000);
     size_t availableMQTTPacket();
     bool isAliveMQTT();
+    void setMQTTClosedHandler(void (*handler)(void)) { setTCPClosedHandler(handler); }
 
     size_t readFile(const char* filename, uint8_t* buffer, size_t size);
     size_t readFilePartial(const char* filename, uint8_t* buffer, size_t size, uint32_t offset);
