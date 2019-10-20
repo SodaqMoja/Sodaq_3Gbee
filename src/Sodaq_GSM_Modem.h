@@ -324,14 +324,6 @@ public:
     // Returns true if successful.
     virtual bool sendSms(const char* phoneNumber, const char* buffer) = 0;
 
-    // MQTT (using this class as a transport)
-    virtual bool openMQTT(const char * server, uint16_t port = 1883) = 0;
-    virtual bool closeMQTT(bool switchOff=true) = 0;
-    virtual bool sendMQTTPacket(uint8_t * pckt, size_t len) = 0;
-    virtual size_t receiveMQTTPacket(uint8_t * pckt, size_t size, uint32_t timeout = 20000) = 0;
-    virtual size_t availableMQTTPacket() = 0;
-    virtual bool isAliveMQTT() = 0;
-
 protected:
     // The stream that communicates with the device.
     Stream* _modemStream;
